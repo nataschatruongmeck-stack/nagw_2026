@@ -1,0 +1,2017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Token Foundry — Design Token Builder</title>
+<style>
+  :root {
+    --bg: #eceef1;
+    --workspace: #f7f8fa;
+    --surface: #ffffff;
+    --ink: #14181d;
+    --ink-soft: #5a6472;
+    --ink-faint: #68717e;
+    --line: #dde1e7;          /* decorative dividers / container edges */
+    --line-soft: #e8ebef;
+    --control-border: #7b8592; /* form controls & icon buttons — meets 3:1 (SC 1.4.11) */
+    --accent: #10707d;      /* teal — the one restrained accent */
+    --accent-deep: #0b5560;
+    --accent-tint: #e4f0f1;
+    --accent-ink: #ffffff;
+    --rail: #171b21;        /* near-black left rail */
+    --rail-ink: #c4ccd6;
+    --rail-ink-soft: #7f8998;
+    --rail-active: #10707d;
+    --artifact-bg: #12151a; /* dark JSON panel */
+    --artifact-line: #262b33;
+    --pass: #276a41;
+    --pass-bg: #e4f3ea;
+    --large: #835900;
+    --large-bg: #fbf0d8;
+    --fail: #bb2c22;
+    --fail-bg: #fbe9e8;
+    --radius: 10px;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Roboto Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+  code, .mono { font-family: var(--mono); }
+  button { font: inherit; cursor: pointer; }
+
+  /* ---------------- App frame ---------------- */
+  .app {
+    display: grid;
+    grid-template-columns: 216px minmax(0, 1fr) minmax(340px, 460px);
+    grid-template-rows: auto 1fr;
+    grid-template-areas: "top top top" "rail main artifact";
+    height: 100vh;
+  }
+
+  /* ---------------- Top bar ---------------- */
+  .topbar {
+    grid-area: top;
+    display: flex; align-items: center; gap: 18px;
+    background: var(--rail);
+    color: #fff;
+    padding: 0 20px;
+    height: 58px;
+    border-bottom: 1px solid #000;
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand .mark {
+    font-family: var(--mono);
+    font-size: 13px; font-weight: 700; letter-spacing: 0.02em;
+    color: #ffffff;
+    background: var(--accent);
+    padding: 3px 8px; border-radius: 6px;
+    align-self: center;
+  }
+  .brand h1 { font-size: 16px; color: #fff; }
+  .brand .tag { font-size: 12px; color: var(--rail-ink-soft); }
+  .topbar .spacer { flex: 1; }
+  .top-actions { display: flex; gap: 8px; align-items: center; }
+  .btn {
+    font-size: 13px; font-weight: 600;
+    padding: 8px 14px; border-radius: 8px;
+    border: 1px solid transparent; background: #2a2f37; color: var(--rail-ink);
+  }
+  .btn:hover { background: #333944; color: #fff; }
+  .btn.primary { background: var(--accent); color: #fff; }
+  .btn.primary:hover { background: var(--accent-deep); }
+  .btn.ghost { background: transparent; border-color: #333944; color: var(--rail-ink); }
+  .btn.ghost:hover { border-color: #4a515c; color: #fff; }
+  .btn:focus-visible { outline: 2px solid #5fc8d4; outline-offset: 2px; }
+
+  /* ---------------- Left rail ---------------- */
+  .rail {
+    grid-area: rail;
+    background: var(--rail);
+    color: var(--rail-ink);
+    overflow-y: auto;
+    padding: 14px 10px 40px;
+  }
+  .rail .group-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.09em;
+    color: var(--rail-ink-soft); font-weight: 700;
+    padding: 16px 12px 6px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; text-align: left;
+    background: transparent; border: 0; color: var(--rail-ink);
+    padding: 8px 12px; border-radius: 8px; font-size: 13.5px; font-weight: 500;
+    margin-bottom: 1px;
+  }
+  .nav-item:hover { background: #22272f; color: #fff; }
+  .nav-item.active { background: var(--rail-active); color: #fff; font-weight: 600; }
+  .nav-item .n-index { font-family: var(--mono); font-size: 11px; color: var(--rail-ink-soft); width: 16px; }
+  .nav-item.active .n-index { color: #bdeef2; }
+  .nav-item .count {
+    margin-left: auto; font-family: var(--mono); font-size: 10.5px;
+    background: #00000038; color: var(--rail-ink-soft);
+    padding: 1px 6px; border-radius: 20px;
+  }
+  .nav-item.active .count { background: #ffffff2b; color: #eafcff; }
+
+  /* ---------------- Main workspace ---------------- */
+  .main {
+    grid-area: main;
+    background: var(--workspace);
+    overflow-y: auto;
+    padding: 28px 34px 80px;
+  }
+  .panel-head { margin-bottom: 20px; max-width: 72ch; }
+  .panel-head .eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--accent); font-weight: 700;
+  }
+  .panel-head h2 { font-size: 22px; margin: 4px 0 6px; }
+  .panel-head p { margin: 0; color: var(--ink-soft); font-size: 13.5px; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 18px 20px; margin-bottom: 18px;
+  }
+  .card > h3 { font-size: 13px; margin-bottom: 4px; }
+  .card > .sub { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 14px; }
+
+  /* Inputs */
+  label.field { display: block; font-size: 12px; font-weight: 600; color: var(--ink-soft); margin-bottom: 5px; }
+  input[type=text], input[type=number], select, textarea {
+    font-family: var(--sans); font-size: 13px;
+    padding: 8px 10px; border: 1px solid var(--control-border); border-radius: 7px;
+    background: var(--surface); color: var(--ink); width: 100%;
+  }
+  input.mono, textarea.mono { font-family: var(--mono); }
+  input:focus, select:focus, textarea:focus {
+    outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent);
+  }
+  input[type=color] {
+    -webkit-appearance: none; appearance: none;
+    width: 34px; height: 34px; padding: 0; border: 1px solid var(--control-border);
+    border-radius: 7px; background: none; cursor: pointer; flex: none;
+  }
+  input[type=color]::-webkit-color-swatch-wrapper { padding: 3px; }
+  input[type=color]::-webkit-color-swatch { border: none; border-radius: 4px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+
+  /* Scale / row tables */
+  .rows { display: flex; flex-direction: column; gap: 8px; }
+  .row {
+    display: grid; align-items: center; gap: 10px;
+    padding: 8px 10px; border: 1px solid var(--line-soft); border-radius: 8px;
+    background: var(--surface);
+  }
+  .row.scale { grid-template-columns: 30px 1.3fr 90px 60px 1fr 30px; }
+  .row .grip { color: var(--ink-faint); font-family: var(--mono); font-size: 11px; text-align: center; }
+  .row .preview-out { font-family: var(--mono); font-size: 11.5px; color: var(--accent-deep); }
+  .row input { padding: 6px 8px; }
+  .icon-btn {
+    border: 1px solid var(--control-border); background: var(--surface); color: var(--ink-soft);
+    width: 28px; height: 28px; border-radius: 6px; line-height: 1; font-size: 15px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .icon-btn:hover { border-color: var(--fail); color: var(--fail); background: var(--fail-bg); }
+  .add-row {
+    align-self: flex-start; margin-top: 4px;
+    font-size: 12.5px; font-weight: 600; color: var(--accent);
+    background: var(--accent-tint); border: 1px dashed var(--accent);
+    padding: 7px 13px; border-radius: 8px;
+  }
+  .add-row:hover { background: #d5e9eb; }
+  /* Visible keyboard focus (SC 2.4.7 / 1.4.11) */
+  .add-row:focus-visible, .icon-btn:focus-visible, .pair a:focus-visible, .main a:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  .nav-item:focus-visible { outline: 2px solid #5fc8d4; outline-offset: -2px; }
+  .hint { font-size: 12px; color: var(--ink-soft); }
+  .unit-note { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); }
+
+  /* Palette chips */
+  .palette-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .swatch-row {
+    display: grid; grid-template-columns: 34px 1fr 96px 28px; align-items: center; gap: 9px;
+    padding: 7px 9px; border: 1px solid var(--line-soft); border-radius: 8px; background: var(--surface);
+  }
+  .swatch-row .hexcode { text-transform: uppercase; }
+
+  /* Contrast matrix (from index.html, compacted) */
+  .matrix-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  table.matrix { border-collapse: collapse; width: 100%; }
+  table.matrix th, table.matrix td { border: 1px solid var(--line-soft); padding: 0; text-align: center; }
+  table.matrix thead th, table.matrix tbody th {
+    background: #fafbfc; font-size: 10.5px; font-weight: 600; padding: 6px 7px; min-width: 74px;
+  }
+  table.matrix tbody th { position: sticky; left: 0; z-index: 1; text-align: left; }
+  table.matrix th code { display: block; font-size: 9.5px; font-weight: 400; color: var(--ink-faint); }
+  .mcell { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 58px; padding: 6px 4px; }
+  .mcell .s { font-size: 15px; font-weight: 700; line-height: 1; }
+  .mcell .r { font-family: var(--mono); font-size: 10.5px; font-weight: 600; }
+  .mbadge { font-size: 8.5px; font-weight: 700; padding: 1px 5px; border-radius: 20px; background: #fffffff0; border: 1px solid #0000001f; }
+  .mbadge.aaa { color: #fff; background: var(--pass); border-color: var(--pass); }
+  .mbadge.pass { color: var(--pass); }
+  .mbadge.large { color: var(--large); }
+  .mbadge.fail { color: var(--fail); }
+  td.same { background: repeating-linear-gradient(45deg,#f2f3f5 0 7px,#e9ebee 7px 14px); }
+  td.same .mcell { color: var(--ink-faint); font-size: 11px; }
+
+  .summary-strip {
+    display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 2px; font-size: 12px;
+  }
+  .stat { display: flex; align-items: center; gap: 7px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; }
+  .stat b { font-family: var(--mono); font-size: 14px; }
+  .dot { width: 9px; height: 9px; border-radius: 3px; }
+
+  /* Semantic pair cards */
+  .pairs { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 12px; }
+  .pair {
+    border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: var(--surface);
+  }
+  .pair .demo { padding: 16px; display: flex; flex-direction: column; gap: 4px; }
+  .pair .demo .lg { font-size: 16px; font-weight: 700; }
+  .pair .demo .sm { font-size: 12px; }
+  .pair .cfg { padding: 10px 12px; border-top: 1px solid var(--line-soft); display: grid; gap: 8px; }
+  .pair .cfg .r2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pair .verdict { font-family: var(--mono); font-size: 11px; padding: 4px 8px; border-radius: 6px; text-align: center; font-weight: 700; }
+  .pair .name-in { font-weight: 700; }
+  .mini-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-faint); margin-bottom: 3px; display:block; }
+
+  /* Type specimen */
+  .specimen { border: 1px solid var(--line-soft); border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; background: var(--surface); }
+  .specimen .demo { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .specimen .meta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
+  .specimen .meta label { font-size: 11px; font-weight: 600; color: var(--ink-soft); display: flex; align-items: center; gap: 6px; }
+  .specimen .meta input { width: 66px; padding: 4px 6px; }
+  .specimen .name-tag { font-family: var(--mono); font-weight: 700; font-size: 11px; color: var(--accent-deep); text-transform: uppercase; }
+
+  /* ---------------- Artifact (JSON) panel ---------------- */
+  .artifact {
+    grid-area: artifact;
+    background: var(--artifact-bg);
+    color: #d7dde5;
+    display: flex; flex-direction: column;
+    border-left: 1px solid #000;
+    min-height: 0;
+  }
+  .artifact-head {
+    padding: 14px 16px; border-bottom: 1px solid var(--artifact-line);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .artifact-head .fname { font-family: var(--mono); font-size: 12.5px; color: #eef2f6; font-weight: 600; }
+  .artifact-head .live { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: #6bd0da; margin-left: auto; }
+  .live .pulse { width: 7px; height: 7px; border-radius: 50%; background: #29c1cf; box-shadow: 0 0 0 0 #29c1cf88; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 #29c1cf66;} 70%{box-shadow:0 0 0 7px #29c1cf00;} 100%{box-shadow:0 0 0 0 #29c1cf00;} }
+
+  .gate {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+    background: var(--artifact-line); border-bottom: 1px solid var(--artifact-line);
+  }
+  .gate .g { background: var(--artifact-bg); padding: 10px 12px; text-align: center; }
+  .gate .g .num { font-family: var(--mono); font-size: 18px; font-weight: 700; line-height: 1; }
+  .gate .g .lbl { font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; color: #7b8795; margin-top: 4px; }
+  .name-check { display: none; padding: 8px 14px; border-bottom: 1px solid var(--artifact-line); font-size: 11.5px; background: #1c1611; }
+  .name-check .nc-err { color: #f0776c; font-weight: 700; }
+  .name-check .nc-warn { color: #e6b657; font-weight: 700; }
+  .name-check details { margin-top: 4px; color: #9aa4b2; }
+  .name-check summary { cursor: pointer; color: #7fd6e0; }
+  .name-check .nc-list { font-family: var(--mono); font-size: 10.5px; margin-top: 4px; line-height: 1.55; }
+  input.name-error { border-color: var(--fail); box-shadow: inset 0 0 0 1px var(--fail); background: var(--fail-bg); }
+  input.name-warn { border-color: var(--large); background: var(--large-bg); }
+
+  .gate .g.pass .num { color: #5fd08a; }
+  .gate .g.large .num { color: #e6b657; }
+  .gate .g.fail .num { color: #f0776c; }
+
+  .artifact-body { flex: 1; overflow: auto; min-height: 0; }
+  pre.json { margin: 0; padding: 14px 16px; font-family: var(--mono); font-size: 11.5px; line-height: 1.65; white-space: pre; tab-size: 2; }
+  .tok-key { color: #7fd6e0; }
+  .tok-str { color: #b6e59e; }
+  .tok-num { color: #f0b866; }
+  .tok-bool { color: #d89bf0; }
+  .tok-punc { color: #828c9b; }
+  .tok-ref { color: #e6a3c9; }
+
+  .artifact-foot { padding: 12px 14px; border-top: 1px solid var(--artifact-line); display: flex; gap: 8px; }
+  .artifact-foot .btn { flex: 1; justify-content: center; text-align: center; }
+  .artifact-foot .btn.primary { color: #fff; }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 13px;
+    opacity: 0; pointer-events: none; transition: .2s; z-index: 50;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+
+  /* Restore-session banner (Task 1) */
+  .restore-banner {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    background: var(--accent-tint); border: 1px solid var(--accent);
+    border-radius: var(--radius); padding: 12px 16px; margin-bottom: 20px;
+  }
+  .restore-banner .rb-text { font-size: 13.5px; color: var(--ink); flex: 1; min-width: 220px; }
+  .restore-banner .rb-actions { display: flex; gap: 8px; }
+  .restore-banner button { font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 8px; border: 1px solid transparent; }
+  .restore-banner .btn-restore { background: var(--accent); color: #fff; }
+  .restore-banner .btn-restore:hover { background: var(--accent-deep); }
+  .restore-banner .btn-fresh { background: var(--surface); color: var(--accent-deep); border-color: var(--control-border); }
+  .restore-banner .btn-fresh:hover { background: #eef4f4; }
+  .restore-banner button:focus-visible { outline: 2px solid var(--accent-deep); outline-offset: 2px; }
+
+  /* Undo affordance inside the toast */
+  .toast-undo {
+    margin-left: 14px; background: transparent; border: 1px solid #ffffff66;
+    color: #8fe3ec; font-weight: 700; font-size: 12.5px; padding: 3px 10px; border-radius: 6px;
+  }
+  .toast-undo:hover { border-color: #ffffffaa; color: #b6eef4; }
+  .toast-undo:focus-visible { outline: 2px solid #5fc8d4; outline-offset: 2px; }
+
+  section.tab { display: none; }
+  section.tab.active { display: block; }
+
+  @media (max-width: 1100px) {
+    .app { grid-template-columns: 180px 1fr; grid-template-areas: "top top" "rail main"; }
+    .artifact { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="mark">{ }</span>
+      <h1>Token Foundry</h1>
+      <span class="tag">design tokens with WCAG baked in</span>
+    </div>
+    <div class="spacer"></div>
+    <div class="top-actions">
+      <button class="btn ghost" id="loadSample">Load Meck sample</button>
+      <button class="btn ghost" id="importBtn">Import JSON</button>
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
+      <button class="btn ghost" id="resetBtn">Clear all</button>
+    </div>
+  </header>
+
+  <!-- Left rail -->
+  <nav class="rail" id="rail" aria-label="Token categories"></nav>
+
+  <!-- Main workspace -->
+  <main class="main" id="main"></main>
+
+  <!-- Artifact panel -->
+  <aside class="artifact">
+    <div class="artifact-head">
+      <span class="fname" id="fname">tokens.json</span>
+      <span class="live"><span class="pulse"></span> live</span>
+    </div>
+    <div class="gate" id="gate"></div>
+    <div id="nameCheck" class="name-check" role="status" aria-live="polite"></div>
+    <div class="artifact-body"><pre class="json" id="jsonOut"></pre></div>
+    <div class="artifact-foot" style="flex-direction:column;gap:8px">
+      <div style="display:flex;gap:8px;width:100%">
+        <button class="btn ghost" id="copyBtn" style="flex:1;justify-content:center">Copy JSON</button>
+        <button class="btn primary" id="downloadBtn" style="flex:2;justify-content:center">Download tokens.json</button>
+      </div>
+      <div style="display:flex;gap:8px;width:100%">
+        <button class="btn ghost" id="dlConfig" style="flex:1;justify-content:center">Style Dictionary config</button>
+        <button class="btn ghost" id="dlInstructions" style="flex:1;justify-content:center">instructions.md</button>
+      </div>
+    </div>
+  </aside>
+
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+<div id="srStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   WCAG 2.1 math — exact per spec (from index.html)
+   ============================================================ */
+function srgbToLinear(c8){ const c=c8/255; return c<=0.03928 ? c/12.92 : Math.pow((c+0.055)/1.055,2.4); }
+function relLum(rgb){ return 0.2126*srgbToLinear(rgb.r)+0.7152*srgbToLinear(rgb.g)+0.0722*srgbToLinear(rgb.b); }
+function hexToRgb(hex){
+  const s=(hex||"").trim().replace(/^#/,"");
+  if(/^[0-9a-f]{3}$/i.test(s)) return {r:parseInt(s[0]+s[0],16),g:parseInt(s[1]+s[1],16),b:parseInt(s[2]+s[2],16)};
+  if(/^[0-9a-f]{6}$/i.test(s)) return {r:parseInt(s.slice(0,2),16),g:parseInt(s.slice(2,4),16),b:parseInt(s.slice(4,6),16)};
+  return null;
+}
+function contrast(hexA,hexB){
+  const a=hexToRgb(hexA), b=hexToRgb(hexB);
+  if(!a||!b) return 0;
+  const la=relLum(a), lb=relLum(b);
+  return (Math.max(la,lb)+0.05)/(Math.min(la,lb)+0.05);
+}
+const AA_N=4.5, AA_L=3.0, AAA_N=7.0, AAA_L=4.5;
+function classify(r){ if(r>=AAA_N) return "aaa"; if(r>=AA_N) return "pass"; if(r>=AA_L) return "large"; return "fail"; }
+function verdictWord(r){ if(r>=AA_N) return "PASS"; if(r>=AA_L) return "LARGE"; return "FAIL"; }
+function fmtRatio(r){ return (Math.round(r*100)/100).toFixed(2)+":1"; }
+function bestTextOn(bgHex){ return contrast("#FFFFFF",bgHex) >= contrast("#000000",bgHex) ? "#FFFFFF" : "#000000"; }
+
+/* ============================================================
+   State — seeded with Mecklenburg County values
+   ============================================================ */
+function px2rem(px){ const n=Number(px); if(!isFinite(n)) return "0rem"; return (Math.round((n/base())*10000)/10000)+"rem"; }
+
+let state = seedMeck();
+
+function seedMeck(){
+  return {
+    meta: { name:"Mecklenburg County", version:"1.0.0", description:"Design tokens with WCAG 2.1 AA verdicts baked in.", baseFontSize:16 },
+    raw: [
+      {name:"blue-600",v:"#2058CA"},{name:"navy-800",v:"#213F7D"},{name:"terra-700",v:"#B25231"},
+      {name:"teal-700",v:"#337687"},{name:"olive-700",v:"#5B682B"},{name:"purple-900",v:"#3B1D6C"},
+      {name:"ink-900",v:"#1B3B3B"},{name:"green-300",v:"#B5CF55"},{name:"error-700",v:"#A32E12"},
+      {name:"success-800",v:"#3D5216"},{name:"tint-blue",v:"#EBF0F8"},{name:"tint-gray",v:"#EEEEEE"},
+      {name:"tint-lavender",v:"#EBE8F0"},{name:"tint-green",v:"#F5F8E6"},{name:"tint-teal",v:"#EAF1F3"},
+      {name:"tint-peach",v:"#FAE8E2"},{name:"white",v:"#FFFFFF"},{name:"black",v:"#000000"}
+    ],
+    action: [
+      {name:"primary",bg:"blue-600",text:"white",border:""},
+      {name:"navy",bg:"navy-800",text:"white",border:""},
+      {name:"terracotta",bg:"terra-700",text:"white",border:""},
+      {name:"teal",bg:"teal-700",text:"white",border:""},
+      {name:"purple",bg:"purple-900",text:"white",border:""},
+      {name:"green",bg:"green-300",text:"black",border:"olive-700"}
+    ],
+    status: [
+      {name:"error",fg:"error-700",bg:"tint-peach",icon:"triangle"},
+      {name:"success",fg:"success-800",bg:"tint-green",icon:"check"},
+      {name:"info",fg:"navy-800",bg:"tint-blue",icon:"info"}
+    ],
+    surface: [
+      {name:"default",     bg:"white",     text:"ink-900"},
+      {name:"muted",       bg:"tint-gray", text:"ink-900"},
+      {name:"info-subtle", bg:"tint-blue", text:"navy-800"},
+      {name:"brand",       bg:"navy-800",  text:"white"},
+      {name:"brand-teal",  bg:"teal-700",  text:"white"}
+    ],
+    link: "blue-600",
+    focusRing: "navy-800",
+    typography: {
+      family:"Roboto",
+      fallback:"sans-serif",
+      desktop:[
+        {name:"h1",size:48,lh:58,weight:700},{name:"h2",size:40,lh:50,weight:700},
+        {name:"h3",size:36,lh:44,weight:700},{name:"h4",size:32,lh:40,weight:700},
+        {name:"h5",size:28,lh:34,weight:700},{name:"h6",size:24,lh:28,weight:700},
+        {name:"body",size:18,lh:24,weight:500},{name:"body-small",size:14,lh:19,weight:400}
+      ],
+      mobile:[
+        {name:"h1",size:40,lh:50,weight:700},{name:"h2",size:36,lh:44,weight:700},
+        {name:"h3",size:32,lh:40,weight:700},{name:"h4",size:28,lh:34,weight:700},
+        {name:"h5",size:24,lh:28,weight:700},{name:"h6",size:20,lh:26,weight:700},
+        {name:"body",size:16,lh:24,weight:500}
+      ]
+    },
+    spacing: [
+      {name:"0",v:0},{name:"1",v:4},{name:"2",v:8},{name:"3",v:12},{name:"4",v:16},
+      {name:"5",v:24},{name:"6",v:32},{name:"7",v:40},{name:"8",v:48},{name:"10",v:64},{name:"12",v:96}
+    ],
+    radii: [
+      {name:"none",v:0},{name:"sm",v:8},{name:"md",v:10},{name:"lg",v:16},{name:"full",v:9999}
+    ],
+    border: [
+      {name:"hairline",v:1},{name:"thin",v:2},{name:"thick",v:3}
+    ],
+    shadow: [
+      {name:"sm",v:"0 1px 2px rgba(0,0,0,0.08)"},
+      {name:"md",v:"0 4px 10px rgba(0,0,0,0.10)"},
+      {name:"lg",v:"0 12px 28px rgba(0,0,0,0.14)"}
+    ],
+    duration: [
+      {name:"fast",v:150},{name:"base",v:250},{name:"slow",v:400}
+    ],
+    easing: [
+      {name:"standard",v:"cubic-bezier(0.2, 0, 0, 1)"},
+      {name:"decelerate",v:"cubic-bezier(0, 0, 0, 1)"},
+      {name:"accelerate",v:"cubic-bezier(0.3, 0, 1, 1)"}
+    ],
+    breakpoint: [
+      {name:"sm",v:640},{name:"md",v:768},{name:"lg",v:1024},{name:"xl",v:1280}
+    ],
+    zindex: [
+      {name:"base",v:0},{name:"dropdown",v:1000},{name:"sticky",v:1100},
+      {name:"overlay",v:1200},{name:"modal",v:1300},{name:"toast",v:1400}
+    ],
+    opacity: [
+      {name:"disabled",v:0.45},{name:"muted",v:0.65},{name:"full",v:1}
+    ],
+    component: {
+      button: [
+        {name:"standard",minHeight:50,minWidth:182,padding:16,radius:10,shadow:""},
+        {name:"narrow",minHeight:32,minWidth:182,padding:12,radius:10,shadow:""},
+        {name:"search-mobile",minHeight:50,minWidth:152,padding:13,radius:8,shadow:""}
+      ],
+      card: { radius:16, gap:8, paddingNoImage:32, paddingWithImage:16, borderRest:2, borderHover:3, shadow:"" },
+      input: { minHeight:44, padding:12, radius:8, borderWidth:1, shadow:"" }
+    }
+  };
+}
+
+/* ============================================================
+   Navigation
+   ============================================================ */
+const TABS = [
+  {id:"project",   label:"Project",    count:()=>null},
+  {id:"colors",    label:"Colors",     count:()=>state.raw.length},
+  {id:"typography",label:"Typography", count:()=>state.typography.desktop.length+state.typography.mobile.length},
+  {id:"spacing",   label:"Spacing",    count:()=>state.spacing.length},
+  {id:"radii",     label:"Radii",      count:()=>state.radii.length},
+  {id:"border",    label:"Borders",    count:()=>state.border.length},
+  {id:"shadow",    label:"Shadows",    count:()=>state.shadow.length},
+  {id:"motion",    label:"Motion",     count:()=>state.duration.length+state.easing.length},
+  {id:"breakpoint",label:"Breakpoints",count:()=>state.breakpoint.length},
+  {id:"zindex",    label:"Z-index",    count:()=>state.zindex.length},
+  {id:"opacity",   label:"Opacity",    count:()=>state.opacity.length},
+  {id:"component", label:"Components",  count:()=>state.component.button.length+2}
+];
+let activeTab = "colors";
+
+let railFocusPending=false;
+function renderRail(){
+  const rail = document.getElementById("rail");
+  let html = `<div class="group-label">Token categories</div>`;
+  TABS.forEach((t,i)=>{
+    const c = t.count();
+    const badge = c===null ? "" : `<span class="count" aria-hidden="true">${c}</span>`;
+    const aria = t.label + (c===null ? "" : `, ${c} token${c===1?"":"s"}`);
+    const current = t.id===activeTab ? ` aria-current="page"` : "";
+    html += `<button class="nav-item ${t.id===activeTab?"active":""}" data-tab="${t.id}" aria-label="${esc(aria)}"${current}>
+      <span class="n-index" aria-hidden="true">${String(i).padStart(2,"0")}</span>${t.label}${badge}</button>`;
+  });
+  rail.innerHTML = html;
+  rail.querySelectorAll(".nav-item").forEach(b=>b.addEventListener("click",()=>{ activeTab=b.dataset.tab; railFocusPending=true; navigating=true; renderAll(); navigating=false; }));
+  // keyboard users must not be dumped to the top of the document after a tab switch
+  if(railFocusPending){ const act=rail.querySelector(`[data-tab="${activeTab}"]`); if(act) act.focus(); railFocusPending=false; }
+}
+
+/* ============================================================
+   Small helpers for editable scale rows
+   ============================================================ */
+const esc = s => String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+function scaleTab(arr, opts){
+  // opts: {title, sub, unit, valueType:'px'|'number'|'ms'|'text', outFmt}
+  let rows = arr.map((item,i)=>{
+    const out = opts.outFmt ? opts.outFmt(item.v) : "";
+    const step = opts.valueType==="number" ? "0.01" : "1";
+    const type = opts.valueType==="text" ? "text" : "number";
+    const cls = opts.valueType==="text" ? "mono" : "mono";
+    return `<div class="row scale">
+      <span class="grip">${String(i+1).padStart(2,"0")}</span>
+      <input type="text" class="mono" data-k="name" data-i="${i}" value="${esc(item.name)}" aria-label="name">
+      <input type="${type}" step="${step}" class="${cls}" data-k="v" data-i="${i}" value="${esc(item.v)}" aria-label="value">
+      <span class="unit-note">${opts.unit||""}</span>
+      <span class="preview-out">${esc(out)}</span>
+      <button class="icon-btn" data-del="${i}" aria-label="Remove ${esc(item.name)}">×</button>
+    </div>`;
+  }).join("");
+  return `<div class="panel-head">
+      <div class="eyebrow">${opts.eyebrow||""}</div>
+      <h2>${opts.title}</h2><p>${opts.sub}</p>
+    </div>
+    <div class="card">
+      <div class="rows" data-scale="${opts.key}">${rows}</div>
+      <button class="add-row" data-add="${opts.key}">+ Add ${opts.singular||"token"}</button>
+    </div>`;
+}
+
+function wireScale(key, valueType){
+  const container = document.querySelector(`[data-scale="${key}"]`);
+  if(container){
+    container.querySelectorAll("input").forEach(inp=>{
+      inp.addEventListener("input",()=>{
+        const i=+inp.dataset.i, k=inp.dataset.k;
+        let val = inp.value;
+        if(k==="v" && valueType!=="text") val = inp.value===""? "" : Number(inp.value);
+        state[key][i][k] = val;
+        renderArtifact();
+        // refresh preview-out for this row only
+        const row = inp.closest(".row");
+        const out = row && row.querySelector(".preview-out");
+        if(out && CURRENT_OUTFMT) out.textContent = CURRENT_OUTFMT(state[key][i].v);
+      });
+    });
+    container.querySelectorAll("[data-del]").forEach(btn=>{
+      btn.addEventListener("click",()=>{ const i=+btn.dataset.del; deleteWithUndo(state[key], i, `Removed ${state[key][i].name}`); });
+    });
+  }
+  const add = document.querySelector(`[data-add="${key}"]`);
+  if(add) add.addEventListener("click",()=>{ state[key].push(defaultRow(key)); renderAll(); });
+}
+let CURRENT_OUTFMT = null;
+
+function defaultRow(key){
+  switch(key){
+    case "spacing": case "radii": case "border": return {name:"new",v:0};
+    case "shadow": return {name:"new",v:"0 1px 2px rgba(0,0,0,0.1)"};
+    case "duration": return {name:"new",v:200};
+    case "easing": return {name:"new",v:"cubic-bezier(0.2, 0, 0, 1)"};
+    case "breakpoint": return {name:"new",v:1440};
+    case "zindex": return {name:"new",v:0};
+    case "opacity": return {name:"new",v:1};
+    default: return {name:"new",v:0};
+  }
+}
+
+/* ============================================================
+   Tab renderers
+   ============================================================ */
+function renderMain(){
+  const main = document.getElementById("main");
+  CURRENT_OUTFMT = null;
+  let html="";
+  switch(activeTab){
+    case "project":    html=tabProject(); break;
+    case "colors":     html=tabColors(); break;
+    case "typography": html=tabTypography(); break;
+    case "spacing":    CURRENT_OUTFMT=px2rem; html=scaleTab(state.spacing,{key:"spacing",eyebrow:"layout",title:"Spacing scale",sub:"Consistent rhythm for margins, padding and gaps. Authored in px, exported as rem.",unit:"px",valueType:"number",outFmt:px2rem,singular:"step"}); break;
+    case "radii":      CURRENT_OUTFMT=px2rem; html=scaleTab(state.radii,{key:"radii",eyebrow:"shape",title:"Corner radii",sub:"Rounding steps for cards, buttons and inputs. Use a large value like 9999 for pills.",unit:"px",valueType:"number",outFmt:px2rem,singular:"radius"}); break;
+    case "border":     CURRENT_OUTFMT=px2rem; html=scaleTab(state.border,{key:"border",eyebrow:"shape",title:"Border widths",sub:"Stroke weights for dividers, outlines and focus rings.",unit:"px",valueType:"number",outFmt:px2rem,singular:"width"}); break;
+    case "shadow":     CURRENT_OUTFMT=(v)=>v; html=scaleTab(state.shadow,{key:"shadow",eyebrow:"depth",title:"Shadows & elevation",sub:"Full CSS box-shadow values, ordered lowest to highest elevation.",unit:"css",valueType:"text",outFmt:(v)=>"",singular:"level"}); break;
+    case "motion":     html=tabMotion(); break;
+    case "breakpoint": CURRENT_OUTFMT=(v)=>v+"px"; html=scaleTab(state.breakpoint,{key:"breakpoint",eyebrow:"responsive",title:"Breakpoints",sub:"Min-width thresholds where the layout changes. Exported in px.",unit:"px",valueType:"number",outFmt:(v)=>v+"px",singular:"breakpoint"}); break;
+    case "zindex":     CURRENT_OUTFMT=(v)=>String(v); html=scaleTab(state.zindex,{key:"zindex",eyebrow:"stacking",title:"Z-index",sub:"Named stacking layers so overlap order is intentional, never guessed.",unit:"",valueType:"number",outFmt:(v)=>String(v),singular:"layer"}); break;
+    case "opacity":    CURRENT_OUTFMT=(v)=>String(v); html=scaleTab(state.opacity,{key:"opacity",eyebrow:"effect",title:"Opacity",sub:"Reusable alpha values for disabled, muted and hover states (0–1).",unit:"",valueType:"number",outFmt:(v)=>String(v),singular:"value"}); break;
+    case "component":  html=tabComponent(); break;
+  }
+  main.innerHTML = html;
+  wireMain();
+  maybeRenderRestoreBanner();
+}
+
+function wireMain(){
+  switch(activeTab){
+    case "project": wireProject(); break;
+    case "colors": wireColors(); break;
+    case "typography": wireTypography(); break;
+    case "spacing": wireScale("spacing","number"); break;
+    case "radii": wireScale("radii","number"); break;
+    case "border": wireScale("border","number"); break;
+    case "shadow": wireScale("shadow","text"); break;
+    case "motion": wireMotion(); break;
+    case "breakpoint": wireScale("breakpoint","number"); break;
+    case "zindex": wireScale("zindex","number"); break;
+    case "opacity": wireScale("opacity","number"); break;
+    case "component": wireComponent(); break;
+  }
+}
+
+/* ---------- Project ---------- */
+function tabProject(){
+  const m=state.meta;
+  return `<div class="panel-head"><div class="eyebrow">metadata</div>
+    <h2>Project</h2><p>Names this token set and the base font size everything else is measured against.</p></div>
+  <div class="card"><div class="grid-2">
+    <div><label class="field" for="m-name">Name</label><input id="m-name" type="text" value="${esc(m.name)}"></div>
+    <div><label class="field" for="m-ver">Version</label><input id="m-ver" type="text" class="mono" value="${esc(m.version)}"></div>
+  </div>
+  <div style="margin-top:14px"><label class="field" for="m-desc">Description</label>
+    <textarea id="m-desc" rows="2">${esc(m.description)}</textarea></div>
+  </div>
+  <div class="card"><h3>Base font size</h3><p class="sub">All px inputs across the app are converted to rem against this value. 16px is the browser default and the recommended base.</p>
+    <div style="max-width:180px"><div style="display:flex;align-items:center;gap:8px">
+      <input id="m-base" type="number" min="8" max="32" class="mono" value="${esc(state.meta.baseFontSize)}"><span class="unit-note">px = 1rem</span></div></div>
+  </div>`;
+}
+function wireProject(){
+  const bind=(id,fn)=>{const e=document.getElementById(id); if(e) e.addEventListener("input",()=>{fn(e.value); renderArtifact();});};
+  bind("m-name",v=>state.meta.name=v);
+  bind("m-ver",v=>state.meta.version=v);
+  bind("m-desc",v=>state.meta.description=v);
+  const baseEl=document.getElementById("m-base");
+  if(baseEl){
+    baseEl.addEventListener("input",()=>{ const n=Number(baseEl.value); if(n>0) state.meta.baseFontSize=n; renderArtifact(); });
+    baseEl.addEventListener("change",()=>{ let n=Math.round(Number(baseEl.value)||16); n=Math.min(32,Math.max(8,n)); state.meta.baseFontSize=n; renderMain(); renderArtifact(); });
+  }
+}
+
+/* ---------- Colors ---------- */
+function rawNames(){ return state.raw.map(c=>c.name); }
+function rawHex(name){ const c=state.raw.find(c=>c.name===name); return c?c.v:"#000000"; }
+
+function tabColors(){
+  // Raw palette editor
+  let swatches = state.raw.map((c,i)=>`
+    <div class="swatch-row">
+      <input type="color" data-ci="${i}" data-ck="v" value="${/^#[0-9a-f]{6}$/i.test(c.v)?c.v:"#000000"}" aria-label="${esc(c.name)} color">
+      <input type="text" class="mono" data-ci="${i}" data-ck="name" value="${esc(c.name)}" aria-label="name">
+      <input type="text" class="mono hexcode" data-ci="${i}" data-ck="v" value="${esc(c.v)}" aria-label="hex">
+      <button class="icon-btn" data-cdel="${i}" aria-label="Remove ${esc(c.name)}">×</button>
+    </div>`).join("");
+
+  // Contrast matrix over raw palette
+  const matrix = buildMatrixHTML();
+  const stats = matrixStats();
+
+  // Semantic pairs
+  const actionCards = state.action.map((a,i)=>actionCard(a,i)).join("");
+  const statusCards = state.status.map((s,i)=>statusCard(s,i)).join("");
+  const surfaceCards = state.surface.map((s,i)=>surfaceCard(s,i)).join("");
+  const opts = rawNames().map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("");
+
+  return `<div class="panel-head"><div class="eyebrow">the source of truth</div>
+    <h2>Colors</h2><p>Two layers, per your build guide: a <b>raw</b> palette named by scale position, then <b>semantic</b> pairs that alias into it. Every pair below carries its live WCAG verdict into the export — the accessibility audit ships inside the file.</p></div>
+
+  <div class="card"><h3>Raw palette</h3><p class="sub">Reference layer. Components and AI consume the semantic pairs only, never these directly.</p>
+    <div class="palette-grid" data-rawgrid>${swatches}</div>
+    <button class="add-row" data-addraw>+ Add color</button>
+  </div>
+
+  <div class="card"><h3>Contrast matrix</h3><p class="sub">Rows are backgrounds, columns are text. Exact WCAG 2.1 relative-luminance; AA needs 4.5:1 (3:1 large), AAA needs 7:1 (4.5:1 large).</p>
+    <div class="summary-strip">${stats}</div>
+    <div class="matrix-wrap"><table class="matrix">${matrix}</table></div>
+  </div>
+
+  <div class="card"><h3>Semantic · action pairs (buttons)</h3><p class="sub">Background + its legal text color, and a required border where the fill is below 3:1 on white (SC 1.4.11).</p>
+    <div class="pairs">${actionCards}</div>
+    <button class="add-row" data-addaction>+ Add action</button>
+  </div>
+
+  <div class="card"><h3>Semantic · status pairs</h3><p class="sub">Foreground on tinted background. Pair every status with an icon — never signal by color alone (SC 1.4.1).</p>
+    <div class="pairs">${statusCards}</div>
+    <button class="add-row" data-addstatus>+ Add status</button>
+  </div>
+
+  <div class="card"><h3>Semantic · text-on-surface pairs</h3><p class="sub">Every background a component can sit on, paired with the body text color that is legal on it. This is what UI and AI reach for first — a surface always comes with its verified text color.</p>
+    <div class="pairs">${surfaceCards}</div>
+    <button class="add-row" data-addsurface>+ Add surface</button>
+  </div>
+
+  <div class="card"><div class="grid-2">
+    <div><label class="field" for="link-sel">Link color</label>
+      <select id="link-sel">${opts}</select>
+      <div class="hint" id="link-hint" style="margin-top:6px"></div></div>
+    <div><label class="field" for="focus-sel">Focus ring color</label>
+      <select id="focus-sel">${opts}</select>
+      <div class="hint" id="focus-hint" style="margin-top:6px"></div></div>
+  </div></div>`;
+}
+
+function actionCard(a,i){
+  const bgHex=rawHex(a.bg), txHex=rawHex(a.text);
+  const r=contrast(bgHex,txHex); const v=verdictWord(r);
+  const fillR=contrast(bgHex,"#FFFFFF");
+  const vcolor = v==="PASS"?"var(--pass-bg)":v==="LARGE"?"var(--large-bg)":"var(--fail-bg)";
+  const vink = v==="PASS"?"var(--pass)":v==="LARGE"?"var(--large)":"var(--fail)";
+  const opts = rawNames().map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("");
+  const noneOpt = `<option value="">— none —</option>`;
+  const needBorder = fillR<3;
+  return `<div class="pair" data-action="${i}">
+    <div class="demo" style="background:${bgHex};${a.border?`border-bottom:3px solid ${rawHex(a.border)}`:""}">
+      <span class="lg" style="color:${txHex}">Button label</span>
+      <span class="sm" style="color:${txHex}">action.${esc(a.name)}</span>
+    </div>
+    <div class="cfg">
+      <div><span class="mini-label">name</span><input type="text" class="mono name-in" data-ak="name" data-ai="${i}" value="${esc(a.name)}"></div>
+      <div class="r2">
+        <div><span class="mini-label">bg</span><select data-ak="bg" data-ai="${i}">${opts}</select></div>
+        <div><span class="mini-label">text</span><select data-ak="text" data-ai="${i}">${opts}</select></div>
+      </div>
+      <div><span class="mini-label">border ${needBorder?"(required — fill < 3:1 on white)":"(optional)"}</span>
+        <select data-ak="border" data-ai="${i}">${noneOpt}${opts}</select></div>
+      <div class="verdict" style="background:${vcolor};color:${vink}">text ${fmtRatio(r)} · ${v} &nbsp;·&nbsp; fill vs white ${fmtRatio(fillR)}</div>
+    </div>
+  </div>`;
+}
+
+function statusCard(s,i){
+  const fgHex=rawHex(s.fg), bgHex=rawHex(s.bg);
+  const r=contrast(fgHex,bgHex); const v=verdictWord(r);
+  const vcolor = v==="PASS"?"var(--pass-bg)":v==="LARGE"?"var(--large-bg)":"var(--fail-bg)";
+  const vink = v==="PASS"?"var(--pass)":v==="LARGE"?"var(--large)":"var(--fail)";
+  const opts = rawNames().map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("");
+  return `<div class="pair" data-status="${i}">
+    <div class="demo" style="background:${bgHex};border-left:4px solid ${fgHex}">
+      <span class="lg" style="color:${fgHex}">${esc(s.name)}: message</span>
+      <span class="sm" style="color:${fgHex}">icon: ${esc(s.icon)}</span>
+    </div>
+    <div class="cfg">
+      <div class="r2">
+        <div><span class="mini-label">name</span><input type="text" class="mono name-in" data-sk="name" data-si="${i}" value="${esc(s.name)}"></div>
+        <div><span class="mini-label">icon</span><input type="text" class="mono" data-sk="icon" data-si="${i}" value="${esc(s.icon)}"></div>
+      </div>
+      <div class="r2">
+        <div><span class="mini-label">fg</span><select data-sk="fg" data-si="${i}">${opts}</select></div>
+        <div><span class="mini-label">bg</span><select data-sk="bg" data-si="${i}">${opts}</select></div>
+      </div>
+      <div class="verdict" style="background:${vcolor};color:${vink}">${fmtRatio(r)} · ${v}</div>
+    </div>
+  </div>`;
+}
+
+function surfaceCard(s,i){
+  const bgHex=rawHex(s.bg), txHex=rawHex(s.text);
+  const r=contrast(bgHex,txHex); const v=verdictWord(r);
+  const vcolor = v==="PASS"?"var(--pass-bg)":v==="LARGE"?"var(--large-bg)":"var(--fail-bg)";
+  const vink = v==="PASS"?"var(--pass)":v==="LARGE"?"var(--large)":"var(--fail)";
+  const opts = rawNames().map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("");
+  return `<div class="pair" data-surface="${i}">
+    <div class="demo" style="background:${bgHex};gap:6px">
+      <span class="lg" style="color:${txHex}">Aa surface.${esc(s.name)}</span>
+      <span class="sm" style="color:${txHex}">Body text on this surface stays legible at normal size.</span>
+    </div>
+    <div class="cfg">
+      <div><span class="mini-label">name</span><input type="text" class="mono name-in" data-uk="name" data-ui="${i}" value="${esc(s.name)}"></div>
+      <div class="r2">
+        <div><span class="mini-label">surface (bg)</span><select data-uk="bg" data-ui="${i}">${opts}</select></div>
+        <div><span class="mini-label">text</span><select data-uk="text" data-ui="${i}">${opts}</select></div>
+      </div>
+      <div class="verdict" style="background:${vcolor};color:${vink}">${fmtRatio(r)} · ${v}</div>
+    </div>
+  </div>`;
+}
+
+function buildMatrixHTML(){
+  const cols = state.raw;
+  if(cols.length<2) return `<tbody><tr><td style="padding:14px" class="hint">Add at least two colors.</td></tr></tbody>`;
+  let html = `<thead><tr><th><code>bg ↓ / text →</code></th>`;
+  cols.forEach(c=> html += `<th scope="col">${esc(c.name)}<code>${esc(c.v)}</code></th>`);
+  html += `</tr></thead><tbody>`;
+  cols.forEach(bg=>{
+    html += `<tr><th scope="row">${esc(bg.name)}<code>${esc(bg.v)}</code></th>`;
+    cols.forEach(fg=>{
+      if(bg===fg){ html += `<td class="same"><div class="mcell">—</div></td>`; return; }
+      const r=contrast(bg.v,fg.v); const cls=classify(r);
+      const badge = cls==="aaa"?`<span class="mbadge aaa">AAA</span>`:cls==="pass"?`<span class="mbadge pass">AA</span>`:cls==="large"?`<span class="mbadge large">LG</span>`:`<span class="mbadge fail">✕</span>`;
+      html += `<td style="background:${bg.v}"><div class="mcell">
+        <span class="s" style="color:${fg.v}">Aa</span>
+        <span class="r" style="color:${fg.v}">${fmtRatio(r)}</span>${badge}</div></td>`;
+    });
+    html += `</tr>`;
+  });
+  return html + `</tbody>`;
+}
+
+function allPairsStats(){
+  let aaa=0,pass=0,large=0,fail=0,total=0;
+  const cols=state.raw;
+  for(const bg of cols) for(const fg of cols){ if(bg===fg) continue; total++;
+    const c=classify(contrast(bg.v,fg.v));
+    if(c==="aaa"){aaa++;pass++;} else if(c==="pass") pass++; else if(c==="large") large++; else fail++;
+  }
+  return {aaa,pass,large,fail,total};
+}
+function matrixStats(){
+  const s=allPairsStats();
+  return `<div class="stat"><span class="dot" style="background:var(--pass)"></span><b>${s.pass}</b> pass AA</div>
+    <div class="stat"><span class="dot" style="background:var(--large)"></span><b>${s.large}</b> large-text only</div>
+    <div class="stat"><span class="dot" style="background:var(--fail)"></span><b>${s.fail}</b> fail</div>
+    <div class="stat"><b>${s.total}</b> ordered pairs</div>`;
+}
+
+function wireColors(){
+  // raw grid
+  const grid=document.querySelector("[data-rawgrid]");
+  if(grid){
+    grid.querySelectorAll("input").forEach(inp=>{
+      inp.addEventListener("input",()=>{
+        const i=+inp.dataset.ci, k=inp.dataset.ck;
+        state.raw[i][k]=inp.value;
+        if(k==="v"){
+          // sync sibling text/color inputs live without full rerender
+          const sibs=grid.querySelectorAll(`[data-ci="${i}"][data-ck="v"]`);
+          sibs.forEach(s=>{ if(s!==inp && /^#[0-9a-f]{6}$/i.test(inp.value)) s.value=inp.value; });
+        }
+        renderColorsLive();
+      });
+    });
+    grid.querySelectorAll("[data-cdel]").forEach(b=>b.addEventListener("click",()=>{
+      const i=+b.dataset.cdel; const name=state.raw[i].name; const refs=countColorRefs(name);
+      deleteWithUndo(state.raw, i, `Removed ${name}${refs?` — ${refs} reference${refs>1?"s":""} now default`:""}`);
+    }));
+  }
+  const addRaw=document.querySelector("[data-addraw]");
+  if(addRaw) addRaw.addEventListener("click",()=>{ state.raw.push({name:"color-"+(state.raw.length+1),v:"#888888"}); renderAll(); });
+
+  // action selects/inputs
+  document.querySelectorAll("[data-ai]").forEach(el=>{
+    el.addEventListener("input",()=>{ const i=+el.dataset.ai; state.action[i][el.dataset.ak]=el.value; renderColorsLive(); announceColorChange(el); });
+  });
+  document.querySelectorAll("[data-si]").forEach(el=>{
+    el.addEventListener("input",()=>{ const i=+el.dataset.si; state.status[i][el.dataset.sk]=el.value; renderColorsLive(); announceColorChange(el); });
+  });
+  document.querySelectorAll("[data-ui]").forEach(el=>{
+    el.addEventListener("input",()=>{ const i=+el.dataset.ui; state.surface[i][el.dataset.uk]=el.value; renderColorsLive(); announceColorChange(el); });
+  });
+  document.querySelector("[data-addaction]")?.addEventListener("click",()=>{ state.action.push({name:"new",bg:rawNames()[0]||"black",text:"white",border:""}); renderAll(); });
+  document.querySelector("[data-addstatus]")?.addEventListener("click",()=>{ state.status.push({name:"new",fg:"black",bg:"white",icon:"info"}); renderAll(); });
+  document.querySelector("[data-addsurface]")?.addEventListener("click",()=>{ state.surface.push({name:"new",bg:"white",text:"black"}); renderAll(); });
+
+  // set select values (selects need value assigned after render)
+  syncColorSelects();
+
+  const link=document.getElementById("link-sel"), focus=document.getElementById("focus-sel");
+  if(link){ link.value=state.link; link.addEventListener("change",()=>{ state.link=link.value; updateColorHints(); renderArtifact();
+    const r=contrast(rawHex(state.link),"#FFFFFF"); announce(`Link color ${state.link}: ${spk(r)} versus white, ${spokenVerdict(r)}.`); }); }
+  if(focus){ focus.value=state.focusRing; focus.addEventListener("change",()=>{ state.focusRing=focus.value; updateColorHints(); renderArtifact();
+    const r=contrast(rawHex(state.focusRing),"#FFFFFF"); announce(`Focus ring ${state.focusRing}: ${spk(r)} versus white — ${r>=3?"passes non-text contrast":"fails, needs 3 to one"}.`); }); }
+  updateColorHints();
+}
+
+function syncColorSelects(){
+  state.action.forEach((a,i)=>{
+    document.querySelectorAll(`[data-ai="${i}"]`).forEach(el=>{ if(el.dataset.ak && el.tagName==="SELECT") el.value=a[el.dataset.ak]||""; });
+  });
+  state.status.forEach((s,i)=>{
+    document.querySelectorAll(`[data-si="${i}"]`).forEach(el=>{ if(el.dataset.sk && el.tagName==="SELECT") el.value=s[el.dataset.sk]||""; });
+  });
+  state.surface.forEach((s,i)=>{
+    document.querySelectorAll(`[data-ui="${i}"]`).forEach(el=>{ if(el.dataset.uk && el.tagName==="SELECT") el.value=s[el.dataset.uk]||""; });
+  });
+}
+
+function updateColorHints(){
+  const lh=document.getElementById("link-hint");
+  if(lh){ const r=contrast(rawHex(state.link),"#FFFFFF"); lh.innerHTML=`${fmtRatio(r)} vs white — <b style="color:${r>=4.5?"var(--pass)":"var(--fail)"}">${verdictWord(r)}</b>`; }
+  const fh=document.getElementById("focus-hint");
+  if(fh){ const r=contrast(rawHex(state.focusRing),"#FFFFFF"); fh.innerHTML=`${fmtRatio(r)} vs white — needs ≥3:1 (SC 1.4.11) — <b style="color:${r>=3?"var(--pass)":"var(--fail)"}">${r>=3?"PASS":"FAIL"}</b>`; }
+}
+
+// re-render just the colors tab pieces that depend on values, plus artifact
+function renderColorsLive(){
+  // rebuild matrix + stats + pair cards (names/verdicts) without losing focus on raw inputs:
+  // simplest robust approach: re-render the whole colors tab but restore focus.
+  const active=document.activeElement;
+  const sig = active ? {ci:active.dataset?.ci,ck:active.dataset?.ck,ai:active.dataset?.ai,ak:active.dataset?.ak,si:active.dataset?.si,sk:active.dataset?.sk,ui:active.dataset?.ui,uk:active.dataset?.uk,sel:active.selectionStart} : null;
+  renderMain();
+  renderRail();
+  renderArtifact();
+  if(sig){
+    let selector=null;
+    if(sig.ci!=null&&sig.ck) selector=`[data-ci="${sig.ci}"][data-ck="${sig.ck}"]`;
+    else if(sig.ai!=null&&sig.ak) selector=`[data-ai="${sig.ai}"][data-ak="${sig.ak}"]`;
+    else if(sig.si!=null&&sig.sk) selector=`[data-si="${sig.si}"][data-sk="${sig.sk}"]`;
+    else if(sig.ui!=null&&sig.uk) selector=`[data-ui="${sig.ui}"][data-uk="${sig.uk}"]`;
+    if(selector){ const el=document.querySelector(selector); if(el){ el.focus(); try{ if(sig.sel!=null&&el.setSelectionRange) el.setSelectionRange(sig.sel,sig.sel); }catch(e){} } }
+  }
+}
+
+/* ============================================================
+   Font family — combobox, honest preview, Google Fonts, stack (Task 7)
+   ============================================================ */
+const GOOGLE_FONTS = ["Public Sans","Source Sans 3","Source Serif 4","Open Sans","Noto Sans","Noto Serif","Roboto","Roboto Slab","Inter","Lato","Merriweather","Libre Franklin","IBM Plex Sans","IBM Plex Mono","Atkinson Hyperlegible","Work Sans","PT Sans","Fira Sans"];
+const APP_SANS_STACK = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+const FONT_GENERICS = ["system-ui","serif","sans-serif","monospace","ui-monospace","ui-serif","ui-sans-serif","cursive","fantasy"];
+let GF_TIMER=null, LAST_FONT_STATUS=null;
+
+function famDatalist(){
+  let opts = ["system-ui","Georgia","ui-monospace"].map(s=>`<option value="${esc(s)}">System stack</option>`).join("");
+  opts += `<option value="${esc(APP_SANS_STACK)}">App default sans stack</option>`;
+  opts += GOOGLE_FONTS.map(f=>`<option value="${esc(f)}">Google Fonts</option>`).join("");
+  return opts;
+}
+// DTCG fontFamily as an array: [family, "system-ui", fallback] — no dupes, no system-ui for generics/stacks
+function fontFamilyArray(){
+  const fam=(state.typography.family||"").trim() || "system-ui";
+  const fb=(state.typography.fallback||"sans-serif").trim();
+  const famIsStack = fam.includes(",");
+  const famIsGeneric = FONT_GENERICS.includes(fam.toLowerCase());
+  const arr=[fam];
+  if(!famIsGeneric && !famIsStack) arr.push("system-ui");
+  if(!famIsStack && fb && !arr.some(x=>x.toLowerCase()===fb.toLowerCase())) arr.push(fb);
+  return arr;
+}
+// CSS font-family value (families with whitespace get quoted; generics/stacks pass through)
+function fontStackCss(){
+  return fontFamilyArray().map(f=>{
+    if(f.includes(",") || FONT_GENERICS.includes(f.toLowerCase())) return f;
+    return /\s/.test(f) ? `"${f}"` : f;
+  }).join(", ");
+}
+function googleMatch(name){
+  const n=(name||"").trim().toLowerCase();
+  return GOOGLE_FONTS.find(f=>f.toLowerCase()===n) || null;
+}
+function rampWeights(){
+  const w=new Set();
+  ["desktop","mobile"].forEach(dev=>state.typography[dev].forEach(r=>w.add(Number(r.weight)||400)));
+  return [...w].filter(n=>n>=1).sort((a,b)=>a-b);
+}
+// Inject/update a single <link> only when the family matches the curated Google list
+function loadGoogleFont(){
+  const match=googleMatch(state.typography.family);
+  const existing=document.getElementById("gfLink");
+  if(!match){ return; }   // never inject for non-matching names
+  const weights=rampWeights().join(";") || "400";
+  const href=`https://fonts.googleapis.com/css2?family=${match.replace(/ /g,"+")}:wght@${weights}&display=swap`;
+  let link=existing;
+  if(!link){ link=document.createElement("link"); link.id="gfLink"; link.rel="stylesheet"; document.head.appendChild(link); }
+  if(link.href!==href){
+    link.onload=()=>updateFontStatus();
+    link.onerror=()=>updateFontStatus();   // offline: fall through to the fallback hint, no error
+    link.href=href;
+  }
+}
+function applySpecimenFont(){
+  const stack=fontStackCss();
+  document.querySelectorAll(".specimen .demo").forEach(d=>{ d.style.fontFamily=stack; });
+}
+async function updateFontStatus(){
+  const name=(state.typography.family||"").trim();
+  const el=document.getElementById("fam-status");
+  const isSystem = !name || FONT_GENERICS.includes(name.toLowerCase()) || name.includes(",");
+  let real;
+  if(isSystem){ real=true; }
+  else if(typeof document!=="undefined" && document.fonts){
+    try{ await document.fonts.load(`400 16px "${name}"`); }catch(e){}
+    try{ real=document.fonts.check(`16px "${name}"`); }catch(e){ real=false; }
+  } else { real=false; }
+  const msg = real ? `Previewing in ${name||"system font"}`
+                   : `Font not available in this browser — specimens are showing a fallback`;
+  const tone = real ? "pass" : "large";
+  const mark = real ? "●" : "▲";
+  if(el) el.innerHTML=`<b style="color:var(--${tone})">${mark}</b> ${esc(msg)}`;
+  applySpecimenFont();
+  if(msg!==LAST_FONT_STATUS){ LAST_FONT_STATUS=msg; announce(msg); }
+}
+
+/* ---------- Typography ---------- */
+function tabTypography(){
+  const t=state.typography;
+  const ramp=(device)=> t[device].map((r,i)=>`
+    <div class="specimen" data-typedev="${device}" data-typei="${i}">
+      <div class="demo" style="font-family:${esc(fontStackCss())};font-size:${Math.min(r.size,40)}px;line-height:1.1;font-weight:${r.weight}">
+        <span class="name-tag">${esc(r.name)}</span> The quick brown fox
+      </div>
+      <div class="meta">
+        <label>name <input type="text" class="mono" data-tk="name" value="${esc(r.name)}"></label>
+        <label>size <input type="number" data-tk="size" value="${esc(r.size)}"><span class="unit-note">px → ${px2rem(r.size)}</span></label>
+        <label>line-h <input type="number" data-tk="lh" value="${esc(r.lh)}"><span class="unit-note">px → ${px2rem(r.lh)}</span></label>
+        <label>weight <input type="number" step="100" data-tk="weight" value="${esc(r.weight)}"></label>
+        <button class="icon-btn" data-tdel>×</button>
+      </div>
+    </div>`).join("");
+  return `<div class="panel-head"><div class="eyebrow">type ramp</div>
+    <h2>Typography</h2><p>Sizes and line heights authored in px, exported in rem. Weights as numeric font-weights. Two breakpoint ramps: desktop and mobile.</p></div>
+  <div class="card"><div class="grid-2">
+    <div>
+      <label class="field" for="fam">Font family</label>
+      <input id="fam" type="text" list="famList" autocomplete="off" value="${esc(t.family)}">
+      <datalist id="famList">${famDatalist()}</datalist>
+      <div class="hint" id="fam-status" style="margin-top:6px"></div>
+    </div>
+    <div>
+      <label class="field" for="fam-fallback">Fallback</label>
+      <select id="fam-fallback">
+        <option value="sans-serif">sans-serif</option>
+        <option value="serif">serif</option>
+        <option value="monospace">monospace</option>
+      </select>
+      <div class="hint" style="margin-top:6px">Type any family (self-hosted brand fonts too) or pick a Google Font to preview. Body text ≥ 24px (or ≥ 18.66px bold) counts as “large text” for WCAG contrast.</div>
+    </div>
+  </div></div>
+  <div class="card"><h3>Desktop ramp</h3><div style="margin-top:10px">${ramp("desktop")}</div>
+    <button class="add-row" data-addtype="desktop">+ Add desktop style</button></div>
+  <div class="card"><h3>Mobile ramp</h3><div style="margin-top:10px">${ramp("mobile")}</div>
+    <button class="add-row" data-addtype="mobile">+ Add mobile style</button></div>`;
+}
+function wireTypography(){
+  const fam=document.getElementById("fam");
+  if(fam) fam.addEventListener("input",()=>{
+    state.typography.family=fam.value; renderArtifact(); applySpecimenFont();
+    clearTimeout(GF_TIMER);
+    GF_TIMER=setTimeout(()=>{ loadGoogleFont(); updateFontStatus(); }, 400);   // debounce network + check
+  });
+  const fb=document.getElementById("fam-fallback");
+  if(fb){ fb.value=state.typography.fallback||"sans-serif"; fb.addEventListener("change",()=>{ state.typography.fallback=fb.value; renderArtifact(); applySpecimenFont(); }); }
+  // initial: load matching Google font (if any) and report honest status
+  loadGoogleFont(); updateFontStatus();
+  document.querySelectorAll("[data-typedev]").forEach(spec=>{
+    const dev=spec.dataset.typedev, i=+spec.dataset.typei;
+    spec.querySelectorAll("input").forEach(inp=>{
+      inp.addEventListener("input",()=>{
+        const k=inp.dataset.tk;
+        state.typography[dev][i][k] = (k==="name")? inp.value : Number(inp.value);
+        renderArtifact();
+        if(k==="weight"){ clearTimeout(GF_TIMER); GF_TIMER=setTimeout(()=>{ loadGoogleFont(); updateFontStatus(); }, 400); } // re-request with new weight set
+        if(k!=="name" && k!=="weight"){ // update rem note + demo without losing focus
+          const note=inp.parentElement.querySelector(".unit-note");
+          if(note) note.textContent = "px → "+px2rem(inp.value);
+        }
+      });
+    });
+    spec.querySelector("[data-tdel]")?.addEventListener("click",()=>{ deleteWithUndo(state.typography[dev], i, `Removed ${dev} ${state.typography[dev][i].name}`); });
+  });
+  document.querySelectorAll("[data-addtype]").forEach(b=>b.addEventListener("click",()=>{
+    state.typography[b.dataset.addtype].push({name:"new",size:16,lh:24,weight:400}); renderAll();
+  }));
+}
+
+/* ---------- Motion ---------- */
+function tabMotion(){
+  const dur = state.duration.map((d,i)=>`<div class="row scale">
+    <span class="grip">${String(i+1).padStart(2,"0")}</span>
+    <input type="text" class="mono" data-mk="name" data-md="duration" data-mi="${i}" value="${esc(d.name)}">
+    <input type="number" class="mono" data-mk="v" data-md="duration" data-mi="${i}" value="${esc(d.v)}">
+    <span class="unit-note">ms</span><span class="preview-out">${d.v}ms</span>
+    <button class="icon-btn" data-mdel="duration" data-mi="${i}">×</button></div>`).join("");
+  const eas = state.easing.map((e,i)=>`<div class="row" style="grid-template-columns:30px 1fr 2fr 30px">
+    <span class="grip">${String(i+1).padStart(2,"0")}</span>
+    <input type="text" class="mono" data-mk="name" data-md="easing" data-mi="${i}" value="${esc(e.name)}">
+    <input type="text" class="mono" data-mk="v" data-md="easing" data-mi="${i}" value="${esc(e.v)}">
+    <button class="icon-btn" data-mdel="easing" data-mi="${i}">×</button></div>`).join("");
+  return `<div class="panel-head"><div class="eyebrow">motion</div>
+    <h2>Motion</h2><p>Durations and easing curves. Keep the set small and reuse it — motion should feel like one system. Honor <code>prefers-reduced-motion</code> in code.</p></div>
+  <div class="card"><h3>Durations</h3><div class="rows" style="margin-top:6px">${dur}</div>
+    <button class="add-row" data-add="duration">+ Add duration</button></div>
+  <div class="card"><h3>Easing curves</h3><div class="rows" style="margin-top:6px">${eas}</div>
+    <button class="add-row" data-add="easing">+ Add easing</button></div>`;
+}
+function wireMotion(){
+  document.querySelectorAll("[data-mk]").forEach(inp=>{
+    inp.addEventListener("input",()=>{
+      const arr=inp.dataset.md, i=+inp.dataset.mi, k=inp.dataset.mk;
+      state[arr][i][k] = (arr==="duration"&&k==="v")? Number(inp.value) : inp.value;
+      renderArtifact();
+    });
+  });
+  document.querySelectorAll("[data-mdel]").forEach(b=>b.addEventListener("click",()=>{ const arr=b.dataset.mdel, i=+b.dataset.mi; deleteWithUndo(state[arr], i, `Removed ${arr} ${state[arr][i].name}`); }));
+  document.querySelector('[data-add="duration"]')?.addEventListener("click",()=>{ state.duration.push({name:"new",v:200}); renderAll(); });
+  document.querySelector('[data-add="easing"]')?.addEventListener("click",()=>{ state.easing.push({name:"new",v:"cubic-bezier(0.2, 0, 0, 1)"}); renderAll(); });
+}
+
+/* ---------- Components ---------- */
+function tabComponent(){
+  const c=state.component;
+  const shadowOpts=`<option value="">— none (flat) —</option>`+state.shadow.map(s=>`<option value="${esc(s.name)}">shadow.${esc(s.name)}</option>`).join("");
+  const btns=c.button.map((b,i)=>`<div class="row" style="grid-template-columns:1.1fr repeat(4,0.8fr) 1.2fr 30px">
+    <input type="text" class="mono" data-bk="name" data-bi="${i}" value="${esc(b.name)}" aria-label="name">
+    <label class="field" style="margin:0"><span class="unit-note">min-h</span><input type="number" data-bk="minHeight" data-bi="${i}" value="${esc(b.minHeight)}"></label>
+    <label class="field" style="margin:0"><span class="unit-note">min-w</span><input type="number" data-bk="minWidth" data-bi="${i}" value="${esc(b.minWidth)}"></label>
+    <label class="field" style="margin:0"><span class="unit-note">pad</span><input type="number" data-bk="padding" data-bi="${i}" value="${esc(b.padding)}"></label>
+    <label class="field" style="margin:0"><span class="unit-note">radius</span><input type="number" data-bk="radius" data-bi="${i}" value="${esc(b.radius)}"></label>
+    <label class="field" style="margin:0"><span class="unit-note">shadow</span><select data-bk="shadow" data-bi="${i}">${shadowOpts}</select></label>
+    <button class="icon-btn" data-bdel="${i}">×</button></div>`).join("");
+  const cardF=(k,label)=>`<div><label class="field">${label}<input type="number" data-cardk="${k}" value="${esc(c.card[k])}" style="margin-top:5px"></label></div>`;
+  const inputF=(k,label)=>`<div><label class="field">${label}<input type="number" data-inputk="${k}" value="${esc(c.input[k])}" style="margin-top:5px"></label></div>`;
+  return `<div class="panel-head"><div class="eyebrow">components</div>
+    <h2>Component dimensions</h2><p>Numeric primitives for buttons, cards and inputs. Bind these as number variables in Figma and CSS custom properties on the web. All px, exported as rem.</p></div>
+  ${componentPreview()}
+  <div class="card"><h3>Buttons</h3><p class="sub">Meet the 44×44px minimum target size (WCAG 2.5.5 / 2.5.8) for interactive controls.</p>
+    <div class="rows" style="margin-top:6px">${btns}</div>
+    <button class="add-row" data-addbtn>+ Add button variant</button></div>
+  <div class="card"><h3>Card</h3><div class="grid-3" style="margin-top:6px">
+    ${cardF("radius","Radius")}${cardF("gap","Gap")}${cardF("paddingNoImage","Padding · no image")}
+    ${cardF("paddingWithImage","Padding · with image")}${cardF("borderRest","Title border · rest")}${cardF("borderHover","Title border · hover")}
+  </div>
+  <div style="margin-top:14px;max-width:280px"><label class="field" for="card-shadow">Shadow / elevation</label>
+    <select id="card-shadow" data-cardshadow>${shadowOpts}</select>
+    <div class="hint" style="margin-top:6px">Default is <b>none</b> for a flat UI. Pick a shadow token to add elevation.</div></div>
+  </div>
+  <div class="card"><h3>Input</h3><div class="grid-3" style="margin-top:6px">
+    ${inputF("minHeight","Min height")}${inputF("padding","Padding")}${inputF("radius","Radius")}${inputF("borderWidth","Border width")}
+    <div><label class="field" for="input-shadow">Shadow / elevation</label>
+      <select id="input-shadow">${shadowOpts}</select></div>
+  </div>
+  <div class="hint" style="margin-top:10px">Shadows default to <b>none</b>. Pick a token per component to opt in.</div></div>`;
+}
+function shadowVal(name){
+  if(!name) return "none";
+  const s=state.shadow.find(s=>s.name===name);
+  return s?s.v:"none";
+}
+function refreshComponentPreview(){
+  const n=document.getElementById("compPreview");
+  if(n) n.outerHTML=componentPreview();
+}
+function componentPreview(){
+  const c=state.component;
+  const a=state.action[0];
+  const surf=state.surface[0]||{bg:"white",text:"black"};
+  const linkHex=rawHex(state.link);
+  const focusHex=rawHex(state.focusRing);
+  // buttons rendered live at their real dimensions, in the primary action colors
+  const btns = c.button.map(b=>{
+    const bgHex=a?rawHex(a.bg):"#213F7D", txHex=a?rawHex(a.text):"#FFFFFF";
+    const bdr = a&&a.border?`2px solid ${rawHex(a.border)}`:"none";
+    return `<button style="min-height:${b.minHeight}px;min-width:${b.minWidth}px;padding:0 ${b.padding}px;
+      border-radius:${b.radius}px;background:${bgHex};color:${txHex};border:${bdr};box-shadow:${shadowVal(b.shadow)};
+      font-family:inherit;font-weight:600;font-size:14px;cursor:default" title="button.${esc(b.name)}">${esc(b.name)}</button>`;
+  }).join("");
+  const cardBg=rawHex(surf.bg), cardText=rawHex(surf.text);
+  const cardShadow = shadowVal(c.card.shadow);
+  const stack = fontStackCss();
+  return `<div class="card" id="compPreview"><h3>Live preview</h3><p class="sub">Rendered at the exact dimensions and semantic colors below — edit any value and watch it move.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start;font-family:${stack}">
+
+      <div>
+        <span class="mini-label">Buttons · action.${esc(a?a.name:"primary")}</span>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">${btns}</div>
+      </div>
+
+      <div>
+        <span class="mini-label">Card · surface.${esc(surf.name||"default")}</span>
+        <div style="width:230px;background:${cardBg};border-radius:${c.card.radius}px;padding:${c.card.paddingNoImage}px;
+          box-shadow:${cardShadow};border:1px solid rgba(0,0,0,0.08);display:flex;flex-direction:column;gap:${c.card.gap}px">
+          <a href="#" onclick="return false" style="color:${linkHex};font-weight:700;font-size:16px;text-decoration:none;
+            border-bottom:${c.card.borderRest}px solid ${linkHex};align-self:flex-start;padding-bottom:2px">Card title link</a>
+          <p style="margin:0;color:${cardText};font-size:14px;line-height:1.45">Body copy sits on the surface color with its verified text pairing.</p>
+        </div>
+      </div>
+
+      <div>
+        <span class="mini-label">Input</span>
+        <label style="display:block;font-size:12px;font-weight:600;color:${cardText};margin-bottom:5px">Email address</label>
+        <input type="text" value="you@example.gov" readonly style="min-height:${c.input.minHeight}px;padding:0 ${c.input.padding}px;
+          border-radius:${c.input.radius}px;border:${c.input.borderWidth}px solid #7b8592;width:220px;font-size:14px;font-family:inherit;
+          box-shadow:${shadowVal(c.input.shadow)}" onfocus="this.style.outline='2px solid ${focusHex}';this.style.outlineOffset='2px'">
+        <div class="hint" style="margin-top:6px">Focus ring uses focus.ring-color</div>
+      </div>
+
+    </div>
+  </div>`;
+}
+
+function wireComponent(){
+  const strKeys=new Set(["name","shadow"]);
+  document.querySelectorAll("[data-bi]").forEach(el=>{
+    if(el.tagName==="SELECT") el.value=state.component.button[+el.dataset.bi][el.dataset.bk]||"";
+    el.addEventListener("input",()=>{
+      const i=+el.dataset.bi, k=el.dataset.bk;
+      state.component.button[i][k]=strKeys.has(k)?el.value:Number(el.value);
+      refreshComponentPreview(); renderArtifact();
+    });
+  });
+  document.querySelectorAll("[data-bdel]").forEach(b=>b.addEventListener("click",()=>{ const i=+b.dataset.bdel; deleteWithUndo(state.component.button, i, `Removed button ${state.component.button[i].name}`); }));
+  document.querySelector("[data-addbtn]")?.addEventListener("click",()=>{ state.component.button.push({name:"new",minHeight:44,minWidth:120,padding:16,radius:8,shadow:""}); renderAll(); });
+  document.querySelectorAll("[data-cardk]").forEach(el=>el.addEventListener("input",()=>{ state.component.card[el.dataset.cardk]=Number(el.value); refreshComponentPreview(); renderArtifact(); }));
+  document.querySelectorAll("[data-inputk]").forEach(el=>el.addEventListener("input",()=>{ state.component.input[el.dataset.inputk]=Number(el.value); refreshComponentPreview(); renderArtifact(); }));
+  const cs=document.getElementById("card-shadow");
+  if(cs){ cs.value=state.component.card.shadow||""; cs.addEventListener("change",()=>{ state.component.card.shadow=cs.value; refreshComponentPreview(); renderArtifact(); }); }
+  const is=document.getElementById("input-shadow");
+  if(is){ is.value=state.component.input.shadow||""; is.addEventListener("change",()=>{ state.component.input.shadow=is.value; refreshComponentPreview(); renderArtifact(); }); }
+}
+
+/* ============================================================
+   Build DTCG tokens.json
+   ============================================================ */
+function base(){ return Number(state.meta.baseFontSize) || 16; }
+function rem(px){ const n=Number(px); if(!isFinite(n)) return "0rem"; return (Math.round((n/base())*10000)/10000)+"rem"; }
+
+function contrastExt(bgHex,txHex){
+  const r=contrast(bgHex,txHex);
+  const passes=[];
+  if(r>=AA_N) passes.push("1.4.3");            // AA normal
+  else if(r>=AA_L) passes.push("1.4.3-large"); // AA large only
+  if(r>=AAA_N) passes.push("1.4.6");           // AAA normal
+  return { ratio: Math.round(r*100)/100, verdict: verdictWord(r), passes };
+}
+
+/* ---- DTCG composite parsers for shadow & easing (Task 4) ---- */
+function splitTopLevel(str, sep){
+  const out=[]; let depth=0, cur="";
+  for(const ch of String(str)){
+    if(ch==="(") depth++;
+    else if(ch===")") depth=Math.max(0,depth-1);
+    if(ch===sep && depth===0){ out.push(cur); cur=""; }
+    else cur+=ch;
+  }
+  out.push(cur);
+  return out.map(s=>s.trim()).filter(Boolean);
+}
+function normLen(t){ return /^-?[\d.]+$/.test(t) ? t+"px" : t; }
+function parseShadowLayer(str){
+  const tokens=splitTopLevel(str, " ");
+  let inset=false; const lens=[]; let color=null;
+  for(const tk of tokens){
+    if(tk.toLowerCase()==="inset"){ inset=true; continue; }
+    if(/^-?[\d.]+(px|rem|em|%|vh|vw)?$/i.test(tk)) lens.push(normLen(tk));
+    else color = color ? color+" "+tk : tk;   // rgba()/hex/hsl()/named — single token (parens kept intact)
+  }
+  if(lens.length<2 || !color) return null;
+  const layer={ "color":color, "offsetX":lens[0], "offsetY":lens[1], "blur":lens[2]||"0px", "spread":lens[3]||"0px" };
+  if(inset) layer.inset=true;
+  return layer;
+}
+function shadowToken(str){
+  const layers=splitTopLevel(str, ",").map(parseShadowLayer);
+  if(!layers.length || layers.some(l=>l===null)){
+    // exotic value (keywords, var(), etc.) — keep the string but DROP $type so it isn't a false conformance claim
+    return { "$value": String(str), "$extensions": { "foundry.css": String(str) } };
+  }
+  return { "$type":"shadow", "$value": layers.length===1 ? layers[0] : layers, "$extensions": { "foundry.css": String(str) } };
+}
+function easingToken(str){
+  const m=String(str).match(/^cubic-bezier\(\s*([\d.\-]+)\s*,\s*([\d.\-]+)\s*,\s*([\d.\-]+)\s*,\s*([\d.\-]+)\s*\)$/i);
+  if(m) return { "$type":"cubicBezier", "$value":[parseFloat(m[1]),parseFloat(m[2]),parseFloat(m[3]),parseFloat(m[4])] };
+  return { "$value": String(str), "$extensions": { "foundry.css": String(str) } };
+}
+
+function buildTokens(){
+  const out = {
+    "$schema":"https://tr.designtokens.org/format/",
+    "$description": `${state.meta.name} design tokens. Version ${state.meta.version}. ${state.meta.description}`,
+    "color": { "raw": {}, "action": {}, "status": {}, "surface": {}, "link": {}, "focus": {} },
+    "typography": { "family": { "$type":"fontFamily", "$value": fontFamilyArray() } },
+    "spacing": {}, "radius": {}, "borderWidth": {}, "shadow": {},
+    "duration": {}, "easing": {}, "breakpoint": {}, "zIndex": {}, "opacity": {},
+    "component": { "button": {}, "card": {}, "input": {} }
+  };
+
+  // raw color
+  state.raw.forEach(c=>{ out.color.raw[c.name]={ "$type":"color", "$value": c.v }; });
+
+  // semantic action
+  state.action.forEach(a=>{
+    const bgHex=rawHex(a.bg), txHex=rawHex(a.text);
+    const tok={
+      "bg":  { "$value": `{color.raw.${a.bg}}` },
+      "text":{ "$value": `{color.raw.${a.text}}` }
+    };
+    if(a.border) tok.border={ "$value":`{color.raw.${a.border}}`, "width":"1px" };
+    const ext={ "meck.contrast": contrastExt(bgHex,txHex) };
+    const fillR=contrast(bgHex,"#FFFFFF");
+    if(fillR<3) ext["meck.note"]=`Border required: fill is ${fmtRatio(fillR)} vs white (SC 1.4.11).`;
+    tok["$extensions"]=ext;
+    out.color.action[a.name]=tok;
+  });
+
+  // semantic status
+  state.status.forEach(s=>{
+    const fgHex=rawHex(s.fg), bgHex=rawHex(s.bg);
+    out.color.status[s.name]={
+      "fg":  { "$value":`{color.raw.${s.fg}}` },
+      "bg":  { "$value":`{color.raw.${s.bg}}` },
+      "icon":{ "$value": s.icon },
+      "$extensions": { "meck.contrast": contrastExt(bgHex,fgHex),
+        "meck.note":"Pair with icon + text; never signal by color alone (SC 1.4.1)." }
+    };
+  });
+
+  // semantic text-on-surface
+  state.surface.forEach(s=>{
+    const bgHex=rawHex(s.bg), txHex=rawHex(s.text);
+    out.color.surface[s.name]={
+      "bg":  { "$value":`{color.raw.${s.bg}}` },
+      "text":{ "$value":`{color.raw.${s.text}}` },
+      "$extensions": { "meck.contrast": contrastExt(bgHex,txHex) }
+    };
+  });
+
+  // link + focus
+  out.color.link={ "fg":{ "$value":`{color.raw.${state.link}}` },
+    "$extensions":{ "meck.contrast": contrastExt("#FFFFFF", rawHex(state.link)) } };
+  const frR=contrast(rawHex(state.focusRing),"#FFFFFF");
+  out.color.focus={ "ring-color":{ "$value":`{color.raw.${state.focusRing}}` },
+    "$extensions":{ "meck.contrast":{ "ratio":Math.round(frR*100)/100, "passes": frR>=3?["1.4.11"]:[], "note":"Focus indicator vs white; needs ≥3:1 (SC 1.4.11)." } } };
+
+  // typography ramps
+  ["desktop","mobile"].forEach(dev=>{
+    out.typography[dev]={};
+    state.typography[dev].forEach(r=>{
+      out.typography[dev][r.name]={
+        "fontSize":  { "$type":"dimension", "$value": rem(r.size) },
+        "lineHeight":{ "$type":"dimension", "$value": rem(r.lh) },
+        "fontWeight":{ "$type":"fontWeight","$value": Number(r.weight) }
+      };
+    });
+  });
+
+  // dimensional scales → rem
+  state.spacing.forEach(s=> out.spacing[s.name]={ "$type":"dimension", "$value": rem(s.v) });
+  state.radii.forEach(s=> out.radius[s.name]={ "$type":"dimension", "$value": rem(s.v) });
+  state.border.forEach(s=> out.borderWidth[s.name]={ "$type":"dimension", "$value": rem(s.v) });
+  state.shadow.forEach(s=> out.shadow[s.name]= shadowToken(s.v));
+  state.duration.forEach(d=> out.duration[d.name]={ "$type":"duration", "$value": Number(d.v)+"ms" });
+  state.easing.forEach(e=> out.easing[e.name]= easingToken(e.v));
+  state.breakpoint.forEach(b=> out.breakpoint[b.name]={ "$type":"dimension", "$value": Number(b.v)+"px" });
+  state.zindex.forEach(z=> out.zIndex[z.name]={ "$type":"number", "$value": Number(z.v) });
+  state.opacity.forEach(o=> out.opacity[o.name]={ "$type":"number", "$value": Number(o.v) });
+
+  // components
+  const shadowTok = name => name ? { "$value": `{shadow.${name}}` } : { "$type":"shadow", "$value":"none" };
+  state.component.button.forEach(b=>{
+    out.component.button[b.name]={
+      "minHeight":{ "$type":"dimension","$value":rem(b.minHeight) },
+      "minWidth": { "$type":"dimension","$value":rem(b.minWidth) },
+      "padding":  { "$type":"dimension","$value":rem(b.padding) },
+      "radius":   { "$type":"dimension","$value":rem(b.radius) },
+      "shadow":   shadowTok(b.shadow)
+    };
+  });
+  const c=state.component.card;
+  out.component.card={
+    "radius":{ "$type":"dimension","$value":rem(c.radius) },
+    "gap":{ "$type":"dimension","$value":rem(c.gap) },
+    "paddingNoImage":{ "$type":"dimension","$value":rem(c.paddingNoImage) },
+    "paddingWithImage":{ "$type":"dimension","$value":rem(c.paddingWithImage) },
+    "titleBorderRest":{ "$type":"dimension","$value":rem(c.borderRest) },
+    "titleBorderHover":{ "$type":"dimension","$value":rem(c.borderHover) },
+    "shadow": shadowTok(c.shadow)
+  };
+  const inp=state.component.input;
+  out.component.input={
+    "minHeight":{ "$type":"dimension","$value":rem(inp.minHeight) },
+    "padding":{ "$type":"dimension","$value":rem(inp.padding) },
+    "radius":{ "$type":"dimension","$value":rem(inp.radius) },
+    "borderWidth":{ "$type":"dimension","$value":rem(inp.borderWidth) },
+    "shadow": shadowTok(inp.shadow)
+  };
+
+  // Root-level metadata as a group $extensions (DTCG-conformant — the root is a group)
+  out["$extensions"] = {
+    "foundry.meta": {
+      "name": state.meta.name,
+      "version": state.meta.version,
+      "description": state.meta.description,
+      "baseFontSize": base(),
+      "generator": "token-foundry",
+      "generatedAt": new Date().toISOString()
+    }
+  };
+
+  return out;
+}
+
+/* ============================================================
+   Artifact panel render (syntax-highlighted JSON + gate)
+   ============================================================ */
+function highlight(json){
+  return json
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+      (m)=>{
+        let cls="tok-num";
+        if(/^"/.test(m)){
+          if(/:$/.test(m)) cls="tok-key";
+          else if(/^"\{.*\}"$/.test(m)) cls="tok-ref";
+          else cls="tok-str";
+        } else if(/true|false/.test(m)) cls="tok-bool";
+        else if(/null/.test(m)) cls="tok-bool";
+        return `<span class="${cls}">${m}</span>`;
+      });
+}
+
+/* ============================================================
+   Token name validation (Task 5)
+   ============================================================ */
+const NAME_RE=/^[a-z][a-z0-9-]*$/;
+// Pure-integer names (numeric scale steps like spacing.0, spacing.12) are conventional
+// and compile to valid CSS (--spacing-0), so they don't earn a nudge.
+function nameOk(n){ n=String(n==null?"":n); return NAME_RE.test(n) || /^[0-9]+$/.test(n); }
+let ANNOUNCED_DUPS=new Set();
+function nameCollections(){
+  return {
+    "raw":state.raw, "action":state.action, "status":state.status, "surface":state.surface,
+    "typography.desktop":state.typography.desktop, "typography.mobile":state.typography.mobile,
+    "spacing":state.spacing, "radii":state.radii, "border":state.border, "shadow":state.shadow,
+    "duration":state.duration, "easing":state.easing, "breakpoint":state.breakpoint,
+    "zindex":state.zindex, "opacity":state.opacity, "component.button":state.component.button
+  };
+}
+function validateNames(){
+  const dupes=[], warns=[], status={};
+  for(const [key,arr] of Object.entries(nameCollections())){
+    if(!Array.isArray(arr)) continue;
+    const seen={}; arr.forEach(it=>{ seen[it.name]=(seen[it.name]||0)+1; });
+    const st=[];
+    arr.forEach((it,i)=>{
+      const dup=seen[it.name]>1, warn=!nameOk(it.name);
+      st[i]={dup,warn};
+      if(dup) dupes.push({key,name:it.name});
+      if(warn) warns.push({key,name:it.name});
+    });
+    status[key]=st;
+  }
+  return { dupes, warns, status, dupNames:[...new Set(dupes.map(d=>d.key+"."+d.name))] };
+}
+function applyNameFlags(v){
+  const flag=(inp,i,key)=>{ const st=v.status[key]&&v.status[key][i]; if(!st) return;
+    inp.classList.toggle("name-error", !!st.dup);
+    inp.classList.toggle("name-warn", st.warn && !st.dup);
+    if(st.dup) inp.setAttribute("aria-invalid","true"); else inp.removeAttribute("aria-invalid");
+  };
+  document.querySelectorAll('[data-ck="name"][data-ci]').forEach(inp=>flag(inp,+inp.dataset.ci,"raw"));
+  document.querySelectorAll('[data-ak="name"][data-ai]').forEach(inp=>flag(inp,+inp.dataset.ai,"action"));
+  document.querySelectorAll('[data-sk="name"][data-si]').forEach(inp=>flag(inp,+inp.dataset.si,"status"));
+  document.querySelectorAll('[data-uk="name"][data-ui]').forEach(inp=>flag(inp,+inp.dataset.ui,"surface"));
+  const sc=document.querySelector("[data-scale]");
+  if(sc) sc.querySelectorAll('[data-k="name"]').forEach(inp=>flag(inp,+inp.dataset.i,sc.dataset.scale));
+  document.querySelectorAll(".specimen").forEach(sp=>{ const inp=sp.querySelector('[data-tk="name"]'); if(inp) flag(inp,+sp.dataset.typei,"typography."+sp.dataset.typedev); });
+  document.querySelectorAll('[data-mk="name"]').forEach(inp=>flag(inp,+inp.dataset.mi,inp.dataset.md));
+  document.querySelectorAll('[data-bk="name"][data-bi]').forEach(inp=>flag(inp,+inp.dataset.bi,"component.button"));
+}
+function renderNameCheck(v){
+  const nc=document.getElementById("nameCheck");
+  if(!nc) return;
+  const dn=v.dupNames.length, wn=v.warns.length;
+  if(!dn && !wn){ nc.innerHTML=""; nc.style.display="none"; }
+  else {
+    nc.style.display="block";
+    const parts=[];
+    if(dn) parts.push(`<span class="nc-err">⚠ ${dn} duplicate name${dn>1?"s":""}</span>`);
+    if(wn) parts.push(`<span class="nc-warn">${wn} non-standard name${wn>1?"s":""}</span>`);
+    const list=[...v.dupes.map(d=>"duplicate · "+d.key+"."+d.name), ...v.warns.map(w=>"format · "+w.key+"."+w.name)]
+      .map(esc).join("<br>");
+    nc.innerHTML=`<div>${parts.join(" · ")}</div><details><summary>show details</summary><div class="nc-list">${list}</div></details>`;
+  }
+  // announce only newly-appeared duplicates (not on every keystroke)
+  const curSet=new Set(v.dupes.map(d=>d.key+"|"+d.name));
+  let newSig=null;
+  for(const s of curSet){ if(!ANNOUNCED_DUPS.has(s)) newSig=s; }
+  ANNOUNCED_DUPS.forEach(s=>{ if(!curSet.has(s)) ANNOUNCED_DUPS.delete(s); });
+  if(newSig && !booting){ curSet.forEach(s=>ANNOUNCED_DUPS.add(s)); const [key,name]=newSig.split("|"); announce(`Duplicate token name "${name}" in ${key}. Token names must be unique.`); }
+}
+
+function renderArtifact(){
+  const tokens=buildTokens();
+  const json=JSON.stringify(tokens,null,2);
+  document.getElementById("jsonOut").innerHTML=highlight(json);
+  document.getElementById("fname").textContent=(state.meta.name||"tokens").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")+".tokens.json";
+  // gate: verdict counts over all semantic pairs + matrix
+  let pass=0,large=0,fail=0;
+  const check=(a,b)=>{ const c=classify(contrast(a,b)); if(c==="aaa"||c==="pass")pass++; else if(c==="large")large++; else fail++; };
+  state.action.forEach(a=>check(rawHex(a.bg),rawHex(a.text)));
+  state.status.forEach(s=>check(rawHex(s.fg),rawHex(s.bg)));
+  state.surface.forEach(s=>check(rawHex(s.bg),rawHex(s.text)));
+  document.getElementById("gate").innerHTML=`
+    <div class="g pass"><div class="num">${pass}</div><div class="lbl">pairs pass</div></div>
+    <div class="g large"><div class="num">${large}</div><div class="lbl">large only</div></div>
+    <div class="g fail"><div class="num">${fail}</div><div class="lbl">fail</div></div>`;
+  const nv=validateNames();
+  renderNameCheck(nv);
+  applyNameFlags(nv);
+  if(!booting && !navigating) dirty=true;
+  scheduleSave();
+}
+
+/* ============================================================
+   Top-level render + global actions
+   ============================================================ */
+function renderAll(){ renderRail(); renderMain(); renderArtifact(); }
+
+let TOAST_TIMER=null;
+function toast(msg, action){
+  const t=document.getElementById("toast");
+  clearTimeout(TOAST_TIMER);
+  t.innerHTML="";
+  const span=document.createElement("span"); span.textContent=msg; t.appendChild(span);
+  if(action){
+    const btn=document.createElement("button");
+    btn.className="toast-undo"; btn.type="button"; btn.textContent=action.label;
+    btn.addEventListener("click",()=>{ clearTimeout(TOAST_TIMER); t.classList.remove("show"); action.onClick(); });
+    t.appendChild(btn);
+  }
+  t.classList.add("show");
+  TOAST_TIMER=setTimeout(()=>t.classList.remove("show"), action?5000:1800);
+}
+
+/* ============================================================
+   Persistence — autosave, restore, dirty tracking (Task 1)
+   ============================================================ */
+const LS_KEY="token-foundry:v1";
+let dirty=false, booting=true, navigating=false, PENDING_RESTORE=null, SAVE_TIMER=null;
+
+function scheduleSave(){
+  if(booting || PENDING_RESTORE) return;   // never clobber a session awaiting a restore decision
+  clearTimeout(SAVE_TIMER);
+  SAVE_TIMER=setTimeout(()=>{
+    try{ localStorage.setItem(LS_KEY, JSON.stringify({ state, baseFontSize: state.meta.baseFontSize, savedAt: Date.now() })); }
+    catch(e){ /* private-mode Safari / quota — degrade silently */ }
+  }, 500);
+}
+function loadSaved(){ try{ const s=localStorage.getItem(LS_KEY); return s?JSON.parse(s):null; }catch(e){ return null; } }
+function clearSaved(){ try{ localStorage.removeItem(LS_KEY); }catch(e){} }
+
+// Fill in any fields a saved/older session might be missing so renders never crash.
+function normalizeState(s){
+  s = s || {};
+  s.meta = { name:"", version:"0.1.0", description:"", baseFontSize:16, ...(s.meta||{}) };
+  ["raw","action","status","surface","spacing","radii","border","shadow","duration","easing","breakpoint","zindex","opacity"]
+    .forEach(k=>{ if(!Array.isArray(s[k])) s[k]=[]; });
+  if(!s.typography) s.typography={family:"system-ui",fallback:"sans-serif",desktop:[],mobile:[]};
+  if(!s.typography.fallback) s.typography.fallback="sans-serif";
+  if(!Array.isArray(s.typography.desktop)) s.typography.desktop=[];
+  if(!Array.isArray(s.typography.mobile)) s.typography.mobile=[];
+  if(!s.component) s.component={};
+  if(!Array.isArray(s.component.button)) s.component.button=[];
+  if(!s.component.card) s.component.card={radius:0,gap:0,paddingNoImage:0,paddingWithImage:0,borderRest:0,borderHover:0,shadow:""};
+  if(!s.component.input) s.component.input={minHeight:0,padding:0,radius:0,borderWidth:0,shadow:""};
+  if(s.link==null) s.link=s.raw[0]?.name||"";
+  if(s.focusRing==null) s.focusRing=s.raw[0]?.name||"";
+  return s;
+}
+
+function maybeRenderRestoreBanner(){
+  if(!PENDING_RESTORE) return;
+  const main=document.getElementById("main");
+  if(!main) return;
+  const when=new Date(PENDING_RESTORE.savedAt||Date.now()).toLocaleString();
+  const bar=document.createElement("div");
+  bar.className="restore-banner"; bar.setAttribute("role","region"); bar.setAttribute("aria-label","Restore previous session");
+  bar.innerHTML=`<div class="rb-text"><b>Unsaved work found.</b> Restore your last session from ${esc(when)}?</div>
+    <div class="rb-actions"><button type="button" class="btn-restore" id="rbRestore">Restore</button><button type="button" class="btn-fresh" id="rbFresh">Start fresh</button></div>`;
+  main.prepend(bar);
+  document.getElementById("rbRestore").addEventListener("click",()=>{
+    state=normalizeState(PENDING_RESTORE.state); PENDING_RESTORE=null;
+    renderAll(); dirty=false; scheduleSave();
+    announce("Previous session restored."); toast("Session restored");
+  });
+  document.getElementById("rbFresh").addEventListener("click",()=>{
+    PENDING_RESTORE=null; clearSaved(); dirty=false;
+    renderMain(); announce("Started fresh. Previous session discarded.");
+  });
+}
+
+/* Snapshot-and-restore helpers for destructive actions */
+function countColorRefs(name){
+  let n=0;
+  state.action.forEach(a=>{ if(a.bg===name)n++; if(a.text===name)n++; if(a.border===name)n++; });
+  state.status.forEach(s=>{ if(s.fg===name)n++; if(s.bg===name)n++; });
+  state.surface.forEach(s=>{ if(s.bg===name)n++; if(s.text===name)n++; });
+  if(state.link===name)n++;
+  if(state.focusRing===name)n++;
+  return n;
+}
+function deleteWithUndo(arr, index, label){
+  const item=arr[index];
+  arr.splice(index,1);
+  renderAll();
+  announce(label+". Undo available.");
+  toast(label, { label:"Undo", onClick:()=>{ arr.splice(index,0,item); renderAll(); toast("Restored"); } });
+}
+function replaceStateWithUndo(next, msg){
+  const prev=state;
+  state=next;
+  renderAll();
+  toast(msg, { label:"Undo", onClick:()=>{ state=prev; renderAll(); toast("Undone"); } });
+}
+
+/* Screen-reader status announcements (SC 4.1.3) — the visual verdict/ratio
+   changes are also spoken for non-visual users. */
+function announce(msg){
+  const s=document.getElementById("srStatus");
+  if(!s) return;
+  s.textContent="";                       // clear so identical messages re-announce
+  setTimeout(()=>{ s.textContent=msg; }, 40);
+}
+function spokenVerdict(r){
+  return r>=7 ? "passes triple-A"
+       : r>=4.5 ? "passes double-A"
+       : r>=3 ? "passes for large text only"
+       : "fails contrast";
+}
+function spk(r){ return (Math.round(r*100)/100).toFixed(2)+" to one"; }
+/* Announce the verdict for a semantic pair when its bg/text/fg select changes.
+   `el` may be detached after a re-render, but its dataset is still readable. */
+function announceColorChange(el){
+  if(!el || el.tagName!=="SELECT") return;   // only on discrete pair selection, not while typing a name
+  const {ai,si,ui}=el.dataset;
+  if(ai!=null){
+    const a=state.action[+ai]; const r=contrast(rawHex(a.bg),rawHex(a.text));
+    let m=`Action ${a.name}: ${a.text} on ${a.bg}, ${spk(r)}, ${spokenVerdict(r)}.`;
+    const fill=contrast(rawHex(a.bg),"#FFFFFF");
+    if(fill<3) m+=` Fill is ${spk(fill)} on white — border required.`;
+    announce(m);
+  } else if(si!=null){
+    const s=state.status[+si]; const r=contrast(rawHex(s.fg),rawHex(s.bg));
+    announce(`Status ${s.name}: ${s.fg} on ${s.bg}, ${spk(r)}, ${spokenVerdict(r)}.`);
+  } else if(ui!=null){
+    const s=state.surface[+ui]; const r=contrast(rawHex(s.bg),rawHex(s.text));
+    announce(`Surface ${s.name}: ${s.text} on ${s.bg}, ${spk(r)}, ${spokenVerdict(r)}.`);
+  }
+}
+
+function slug(){ return (state.meta.name||"tokens").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,""); }
+function downloadText(filename, text, mime){
+  const blob=new Blob([text],{type:mime||"text/plain"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  toast("Downloaded "+filename);
+}
+
+/* ---- Style Dictionary v4 config (consumes the DTCG tokens.json) ---- */
+function buildStyleDictionaryConfig(){
+  const tokensFile = slug()+".tokens.json";
+  return {
+    "$schema":"https://raw.githubusercontent.com/style-dictionary/style-dictionary/main/schema.json",
+    "log": { "verbosity":"verbose" },
+    "source": [tokensFile],
+    "platforms": {
+      "css": {
+        "transformGroup":"css",
+        "buildPath":"build/css/",
+        "options": { "outputReferences": true },
+        "files": [{ "destination":"tokens.css", "format":"css/variables" }]
+      },
+      "scss": {
+        "transformGroup":"scss",
+        "buildPath":"build/scss/",
+        "files": [{ "destination":"_tokens.scss", "format":"scss/variables" }]
+      },
+      "js": {
+        "transformGroup":"js",
+        "buildPath":"build/js/",
+        "files": [
+          { "destination":"tokens.js", "format":"javascript/es6" },
+          { "destination":"tokens.d.ts", "format":"typescript/es6-declarations" }
+        ]
+      },
+      "json": {
+        "transformGroup":"js",
+        "buildPath":"build/json/",
+        "files": [{ "destination":"tokens.flat.json", "format":"json/flat" }]
+      }
+    }
+  };
+}
+
+/* ---- Derived accessibility rules (mirrors generate_brand_spec.py) ---- */
+function deriveRules(){
+  const rules=[];
+  state.action.forEach(a=>{
+    const r=contrast(rawHex(a.bg),rawHex(a.text)), fill=contrast(rawHex(a.bg),"#FFFFFF");
+    let line=`\`action.${a.name}\` — ${a.text} on ${a.bg} is ${fmtRatio(r)} (${verdictWord(r)}).`;
+    if(fill<3) line+=` Fill is ${fmtRatio(fill)} vs white, so a border ≥3:1 is **required** (SC 1.4.11)${a.border?` — using \`${a.border}\``:", but none is set"}.`;
+    rules.push(line);
+  });
+  state.surface.forEach(s=>{
+    const r=contrast(rawHex(s.bg),rawHex(s.text));
+    rules.push(`\`surface.${s.name}\` — body text \`${s.text}\` on \`${s.bg}\` is ${fmtRatio(r)} (${verdictWord(r)})${verdictWord(r)!=="PASS"?" — do not use for normal-size body text":""}.`);
+  });
+  state.status.forEach(s=>{
+    const r=contrast(rawHex(s.fg),rawHex(s.bg));
+    rules.push(`\`status.${s.name}\` — ${fmtRatio(r)} (${verdictWord(r)}). Always pair the color with the \`${s.icon}\` icon and a text label; never signal by color alone (SC 1.4.1).`);
+  });
+  const fr=contrast(rawHex(state.focusRing),"#FFFFFF");
+  rules.push(`Focus ring (\`${state.focusRing}\`) is ${fmtRatio(fr)} vs white — ${fr>=3?"passes":"**fails**"} SC 1.4.11. Apply a visible focus indicator to every interactive element (SC 2.4.7).`);
+  const lr=contrast(rawHex(state.link),"#FFFFFF");
+  rules.push(`Link color (\`${state.link}\`) is ${fmtRatio(lr)} vs white (${verdictWord(lr)}). Don't rely on color alone to signal links in body copy — underline them (SC 1.4.1).`);
+  return rules;
+}
+
+/* ---- Human-readable instructions.md (tool-agnostic) ---- */
+function buildInstructions(){
+  const m=state.meta, b=base();
+  const L=[];
+  L.push(`# ${m.name} — Design Tokens`);
+  L.push(``,`Version ${m.version}. ${m.description}`,``);
+  L.push(`Generated by Token Foundry on ${new Date().toISOString().slice(0,10)}. This file explains how to use \`${slug()}.tokens.json\` in any codebase — you do not need any specific AI tool to consume it.`,``);
+  L.push(`## What's in the file`,``);
+  L.push(`The tokens follow the **W3C Design Tokens (DTCG)** format: every token is an object with a \`$value\` and \`$type\`. Colors use two layers:`,``);
+  L.push(`- **\`color.raw\`** — the full palette, named by scale position (\`blue-600\`, \`tint-lavender\`). Reference material only. Do **not** wire these straight into components.`);
+  L.push(`- **\`color.action\` / \`color.status\` / \`color.surface\`** — semantic *pairs* that alias into raw with \`{color.raw.*}\` references. Each carries a \`$extensions."meck.contrast"\` block with its measured WCAG ratio and the success criteria it passes. **Components consume this layer only.**`,``);
+  L.push(`Everything dimensional (\`spacing\`, \`radius\`, \`borderWidth\`, typography sizes, component dimensions) is exported in **rem** against a ${b}px base. Breakpoints are in px, durations in ms.`,``);
+  L.push(`## Accessibility rules derived from this palette`,``);
+  L.push(`These are computed from the values above with the exact WCAG 2.1 relative-luminance formula (PASS ≥ 4.5:1 · LARGE ≥ 3:1 for text ≥24px/18.66px bold · FAIL < 3:1). Change a value and regenerate — the rules change with it.`,``);
+  deriveRules().forEach(r=>L.push(`- ${r}`));
+  const nv=validateNames();
+  if(nv.dupNames.length){
+    L.push(``,`> ⚠ **Duplicate token names detected:** ${nv.dupNames.join(", ")}. These collide as object keys in the JSON and will silently overwrite each other — rename them before shipping.`);
+  }
+  L.push(``,`## Using the tokens`,``);
+  L.push(`### Option A — build with Style Dictionary (recommended)`,``);
+  L.push(`1. \`npm install --save-dev style-dictionary\``);
+  L.push(`2. Put \`${slug()}.tokens.json\` and \`style-dictionary.config.json\` in your project root.`);
+  L.push(`3. \`npx style-dictionary build\``);
+  L.push(`4. Consume the output in \`build/css/tokens.css\` (CSS custom properties), \`build/scss\`, or \`build/js\`.`,``);
+  L.push(`> Style Dictionary v4 reads the DTCG \`$value\`/\`$type\` format natively. \`outputReferences\` is on, so the compiled CSS keeps the raw→semantic aliasing (e.g. \`--color-action-primary-bg: var(--color-raw-blue-600)\`).`,``);
+  L.push(`> **Shadows and easing** export as DTCG composite objects (shadow: \`{color, offsetX, offsetY, blur, spread}\`; easing: a 4-number \`cubicBezier\` array). Style Dictionary's built-in \`css\` transform group compiles these to valid CSS. The original CSS string is always preserved under \`$extensions["foundry.css"]\` if a consumer needs it verbatim.`,``);
+  L.push(`### Option B — read the JSON directly`,``);
+  L.push(`Any language can parse the JSON. To resolve a semantic pair, follow its reference: \`color.action.primary.bg.$value\` is \`"{color.raw.blue-600}"\`, so look up \`color.raw["blue-600"].$value\` for the hex. A tiny resolver:`,``);
+  L.push("```js");
+  L.push(`const t = require("./${slug()}.tokens.json");`);
+  L.push(`const deref = v => typeof v === "string" && v.startsWith("{")`);
+  L.push(`  ? v.slice(1,-1).split(".").reduce((o,k)=>o[k], t).$value : v;`);
+  L.push(`deref(t.color.action.primary.bg.$value); // -> "#2058CA"`);
+  L.push("```",``);
+  L.push(`## Typography`,``);
+  L.push(`Font family: **${state.typography.family}** (exported as the stack \`${fontFamilyArray().join(", ")}\`). Two ramps ship: \`typography.desktop\` and \`typography.mobile\`.`,``);
+  L.push(`> The token only *names* the font — your site is responsible for loading it. Self-hosted \`@font-face\` is recommended for production; the Google Fonts link in the builder is a preview convenience only and is never required at runtime.`,``);
+  L.push(`| Style | Desktop size / line-height | Mobile size / line-height | Weight |`);
+  L.push(`|---|---|---|---|`);
+  state.typography.desktop.forEach(d=>{
+    const mob=state.typography.mobile.find(x=>x.name===d.name);
+    L.push(`| ${d.name} | ${px2rem(d.size)} / ${px2rem(d.lh)} | ${mob?px2rem(mob.size)+" / "+px2rem(mob.lh):"—"} | ${d.weight} |`);
+  });
+  L.push(``,`## Components`,``);
+  L.push(`Button variants meet the 44×44px minimum target size (WCAG 2.5.5 / 2.5.8) where used as primary controls. Card, input, and button dimensions are under \`component.*\` in rem. Apply \`focus.ring-color\` as a visible 2px focus outline with a 2px offset on every interactive element.`,``);
+  L.push(`## Maintaining`,``);
+  L.push(`Reopen \`token-foundry.html\`, use **Import JSON** to load this file, edit, and re-export. Nothing here is hand-maintained — the contrast metadata and these rules regenerate from the palette every time.`,``);
+  return L.join("\n");
+}
+
+document.getElementById("downloadBtn").addEventListener("click",()=>{
+  const blob=new Blob([JSON.stringify(buildTokens(),null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url; a.download=document.getElementById("fname").textContent;
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  dirty=false; toast("Downloaded "+a.download);
+});
+document.getElementById("copyBtn").addEventListener("click",async()=>{
+  try{ await navigator.clipboard.writeText(JSON.stringify(buildTokens(),null,2)); dirty=false; toast("Copied to clipboard"); }
+  catch(e){ toast("Copy failed — select the JSON manually"); }
+});
+document.getElementById("dlConfig").addEventListener("click",()=>{
+  downloadText("style-dictionary.config.json", JSON.stringify(buildStyleDictionaryConfig(),null,2), "application/json");
+  dirty=false;
+});
+document.getElementById("dlInstructions").addEventListener("click",()=>{
+  downloadText("instructions.md", buildInstructions(), "text/markdown");
+  dirty=false;
+});
+document.getElementById("loadSample").addEventListener("click",()=>{ replaceStateWithUndo(seedMeck(), "Loaded Mecklenburg sample"); });
+document.getElementById("resetBtn").addEventListener("click",()=>{
+  const blank={ meta:{name:"My design system",version:"0.1.0",description:"",baseFontSize:16},
+    raw:[{name:"ink",v:"#14181D"},{name:"paper",v:"#FFFFFF"},{name:"brand",v:"#10707D"}],
+    action:[{name:"primary",bg:"brand",text:"paper",border:""}],
+    status:[],
+    surface:[{name:"default",bg:"paper",text:"ink"},{name:"brand",bg:"brand",text:"paper"}],
+    link:"brand", focusRing:"ink",
+    typography:{family:"system-ui",fallback:"sans-serif",desktop:[{name:"h1",size:40,lh:48,weight:700},{name:"body",size:16,lh:24,weight:400}],mobile:[{name:"h1",size:32,lh:40,weight:700},{name:"body",size:16,lh:24,weight:400}]},
+    spacing:[{name:"1",v:4},{name:"2",v:8},{name:"3",v:16},{name:"4",v:24},{name:"5",v:32}],
+    radii:[{name:"sm",v:6},{name:"md",v:10},{name:"full",v:9999}],
+    border:[{name:"hairline",v:1},{name:"thick",v:2}],
+    shadow:[{name:"md",v:"0 4px 10px rgba(0,0,0,0.1)"}],
+    duration:[{name:"base",v:250}], easing:[{name:"standard",v:"cubic-bezier(0.2, 0, 0, 1)"}],
+    breakpoint:[{name:"md",v:768},{name:"lg",v:1024}],
+    zindex:[{name:"base",v:0},{name:"modal",v:1300}],
+    opacity:[{name:"disabled",v:0.45}],
+    component:{ button:[{name:"standard",minHeight:44,minWidth:120,padding:16,radius:8,shadow:""}],
+      card:{radius:12,gap:8,paddingNoImage:24,paddingWithImage:16,borderRest:1,borderHover:2,shadow:""},
+      input:{minHeight:44,padding:12,radius:8,borderWidth:1,shadow:""} }
+  };
+  replaceStateWithUndo(blank, "Cleared to a blank starter");
+});
+
+// Import existing tokens (best-effort: raw palette + typography from a DTCG-ish file)
+document.getElementById("importBtn").addEventListener("click",()=>document.getElementById("importFile").click());
+document.getElementById("importFile").addEventListener("change",(e)=>{
+  const f=e.target.files[0]; if(!f) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const j=JSON.parse(reader.result);
+      IMPORT_SUMMARY=""; importTokens(j); renderAll();
+      toast("Imported "+f.name+IMPORT_SUMMARY);
+    }catch(err){ toast("Could not parse that JSON"); }
+    e.target.value="";
+  };
+  reader.readAsText(f);
+});
+/* ---- import helpers ---- */
+let IMPORT_SUMMARY = "";
+function num(x){ const n=Number(x); return isFinite(n)?n:0; }
+function round4(n){ return Math.round(n*10000)/10000; }
+function tokVal(t){ return (t && typeof t==="object" && "$value" in t) ? t.$value : t; }
+function wrapSection(skipped,label,fn){ try{ fn(); }catch(e){ skipped.push(label); } }
+// composite/array shadow (or legacy string) back to a CSS string for the UI
+function shadowToCss(tok){
+  const css=tok && tok["$extensions"] && tok["$extensions"]["foundry.css"];
+  if(css) return String(css);
+  const v=tokVal(tok);
+  if(typeof v==="string") return v;
+  const layer=l=>[l.inset?"inset":"", l.offsetX, l.offsetY, l.blur, l.spread, l.color].filter(Boolean).join(" ");
+  if(Array.isArray(v)) return v.map(layer).join(", ");
+  if(v && typeof v==="object") return layer(v);
+  return "0 1px 2px rgba(0,0,0,0.1)";
+}
+// cubic-bezier array (or legacy string) back to a CSS string
+function easingToCss(tok){
+  const css=tok && tok["$extensions"] && tok["$extensions"]["foundry.css"];
+  if(css) return String(css);
+  const v=tokVal(tok);
+  if(Array.isArray(v)) return `cubic-bezier(${v.join(", ")})`;
+  return String(v==null?"":v);
+}
+// component shadow: dereference {shadow.name} → token name ("" for none)
+function shadowRefName(tok){
+  const v=tokVal(tok);
+  if(typeof v==="string"){ const m=v.match(/\{shadow\.([^}]+)\}/); if(m) return m[1]; }
+  return "";
+}
+
+function importTokens(j){
+  let unresolved=0; const skipped=[];
+  const remBaseIn = num(j["$extensions"] && j["$extensions"]["foundry.meta"] && j["$extensions"]["foundry.meta"].baseFontSize)
+                 || num(j.meta && j.meta.baseFontSize) || 16;
+  const toPx = raw => {
+    const s=String(tokVal(raw)==null?"":tokVal(raw)).trim();
+    if(!s) return 0;
+    if(/rem$/i.test(s)) return round4(parseFloat(s)*remBaseIn);
+    if(/px$/i.test(s)) return round4(parseFloat(s));
+    const n=parseFloat(s); return isFinite(n)?n:0;
+  };
+  const mapScale = obj => Object.entries(obj).map(([name,t])=>({name, v: toPx(t)}));
+  const ref = x => {
+    const v=(x && x.$value!==undefined) ? x.$value : (typeof x==="string"?x:"");
+    const m=String(v).match(/\{color\.raw\.([^}]+)\}/) || String(v).match(/\{color\.[a-z-]+\.([^}]+)\}/i) || String(v).match(/\{color\.([^}]+)\}/);
+    if(m){ if(state.raw.some(c=>c.name===m[1])) return m[1]; unresolved++; return state.raw[0]?.name||"black"; }
+    const hit=state.raw.find(c=>c.v.toLowerCase()===String(v).toLowerCase());
+    if(hit) return hit.name;
+    if(String(v)) unresolved++;
+    return state.raw[0]?.name||"black";
+  };
+
+  // metadata (first; also gives us the file's base font size for conversions)
+  const fmeta = (j["$extensions"] && j["$extensions"]["foundry.meta"]) || j.meta;
+  if(fmeta){ state.meta={ ...state.meta,
+    name: fmeta.name ?? state.meta.name,
+    version: fmeta.version ?? state.meta.version,
+    description: fmeta.description ?? state.meta.description,
+    baseFontSize: num(fmeta.baseFontSize) || state.meta.baseFontSize }; }
+
+  // raw palette FIRST so references can be validated against it
+  wrapSection(skipped,"color.raw",()=>{ if(j.color?.raw) state.raw = Object.entries(j.color.raw).map(([name,tok])=>({name, v: String(tokVal(tok)||"#000000")})); });
+
+  // semantic colors
+  wrapSection(skipped,"color.action",()=>{ if(j.color?.action) state.action=Object.entries(j.color.action).map(([name,a])=>({ name, bg:ref(a.bg), text:ref(a.text), border:a.border?ref(a.border):"" })); });
+  wrapSection(skipped,"color.status",()=>{ if(j.color?.status) state.status=Object.entries(j.color.status).map(([name,s])=>({ name, fg:ref(s.fg), bg:ref(s.bg), icon:String(tokVal(s.icon)||"info") })); });
+  wrapSection(skipped,"color.surface",()=>{ if(j.color?.surface) state.surface=Object.entries(j.color.surface).map(([name,s])=>({ name, bg:ref(s.bg), text:ref(s.text) })); });
+  wrapSection(skipped,"color.link",()=>{ if(j.color?.link) state.link=ref(j.color.link.fg||j.color.link); });
+  wrapSection(skipped,"color.focus",()=>{ if(j.color?.focus) state.focusRing=ref(j.color.focus["ring-color"]||j.color.focus); });
+
+  // typography (rem → px using the file's base)
+  wrapSection(skipped,"typography",()=>{
+    const t=j.typography; if(!t) return;
+    if(t.family!==undefined){
+      const fv=tokVal(t.family);
+      if(Array.isArray(fv)){
+        state.typography.family = String(fv[0]!=null?fv[0]:"system-ui");
+        const gen=["serif","sans-serif","monospace"];
+        const lastGen=[...fv].reverse().map(String).find(x=>gen.includes(x.toLowerCase()));
+        if(lastGen) state.typography.fallback=lastGen.toLowerCase();
+      } else if(fv!=null){
+        state.typography.family = String(fv);
+      }
+    }
+    ["desktop","mobile"].forEach(dev=>{
+      if(t[dev]) state.typography[dev]=Object.entries(t[dev]).map(([name,r])=>({ name, size:toPx(r.fontSize), lh:toPx(r.lineHeight), weight:num(tokVal(r.fontWeight))||400 }));
+    });
+  });
+
+  // dimensional scales
+  wrapSection(skipped,"spacing",()=>{ if(j.spacing) state.spacing=mapScale(j.spacing); });
+  wrapSection(skipped,"radius",()=>{ if(j.radius) state.radii=mapScale(j.radius); });
+  wrapSection(skipped,"borderWidth",()=>{ if(j.borderWidth) state.border=mapScale(j.borderWidth); });
+  wrapSection(skipped,"breakpoint",()=>{ if(j.breakpoint) state.breakpoint=mapScale(j.breakpoint); });
+  wrapSection(skipped,"zIndex",()=>{ if(j.zIndex) state.zindex=Object.entries(j.zIndex).map(([name,t])=>({name,v:num(tokVal(t))})); });
+  wrapSection(skipped,"opacity",()=>{ if(j.opacity) state.opacity=Object.entries(j.opacity).map(([name,t])=>({name,v:num(tokVal(t))})); });
+
+  // shadows (string or composite) & motion
+  wrapSection(skipped,"shadow",()=>{ if(j.shadow) state.shadow=Object.entries(j.shadow).map(([name,t])=>({name, v: shadowToCss(t)})); });
+  wrapSection(skipped,"duration",()=>{ if(j.duration) state.duration=Object.entries(j.duration).map(([name,t])=>({name, v: num(String(tokVal(t)).replace(/ms$/i,""))})); });
+  wrapSection(skipped,"easing",()=>{ if(j.easing) state.easing=Object.entries(j.easing).map(([name,t])=>({name, v: easingToCss(t)})); });
+
+  // components (rem → px, map titleBorder* back, deref shadow references)
+  wrapSection(skipped,"component.button",()=>{ if(j.component?.button) state.component.button=Object.entries(j.component.button).map(([name,b])=>({ name, minHeight:toPx(b.minHeight), minWidth:toPx(b.minWidth), padding:toPx(b.padding), radius:toPx(b.radius), shadow:shadowRefName(b.shadow) })); });
+  wrapSection(skipped,"component.card",()=>{ const c=j.component?.card; if(c) state.component.card={ radius:toPx(c.radius), gap:toPx(c.gap), paddingNoImage:toPx(c.paddingNoImage), paddingWithImage:toPx(c.paddingWithImage), borderRest:toPx(c.titleBorderRest ?? c.borderRest), borderHover:toPx(c.titleBorderHover ?? c.borderHover), shadow:shadowRefName(c.shadow) }; });
+  wrapSection(skipped,"component.input",()=>{ const c=j.component?.input; if(c) state.component.input={ minHeight:toPx(c.minHeight), padding:toPx(c.padding), radius:toPx(c.radius), borderWidth:toPx(c.borderWidth), shadow:shadowRefName(c.shadow) }; });
+
+  const parts=[];
+  if(unresolved) parts.push(`${unresolved} unresolved color reference${unresolved>1?"s":""} defaulted`);
+  if(skipped.length) parts.push(`${skipped.length} malformed section${skipped.length>1?"s":""} skipped (${skipped.join(", ")})`);
+  IMPORT_SUMMARY = parts.length ? " — "+parts.join(" · ") : "";
+}
+
+// Hard-reject characters that break DTCG reference syntax in token names (Task 5)
+function isNameField(t){
+  const d=t&&t.dataset; if(!d) return false;
+  return d.ck==="name"||d.ak==="name"||d.sk==="name"||d.uk==="name"||d.k==="name"||d.tk==="name"||d.mk==="name"||d.bk==="name";
+}
+document.addEventListener("beforeinput",(e)=>{
+  if(!isNameField(e.target)) return;
+  const incoming = e.data!=null ? e.data : (e.dataTransfer ? e.dataTransfer.getData("text") : "");
+  if(incoming && /[.{}$]/.test(incoming)){
+    e.preventDefault();
+    announce("The characters period, dollar sign, and curly braces are not allowed in token names — they break reference syntax.");
+    toast("“. $ { }” aren’t allowed in token names");
+  }
+});
+
+// Warn before leaving with unsaved edits (Task 1)
+window.addEventListener("beforeunload",(e)=>{ if(dirty){ e.preventDefault(); e.returnValue=""; } });
+
+// boot — render the seed first (never blank), then offer to restore a saved session
+const saved=loadSaved();
+if(saved && saved.state) PENDING_RESTORE=saved;
+renderAll();
+booting=false; dirty=false;
+if(PENDING_RESTORE) announce(`A previous session from ${new Date(PENDING_RESTORE.savedAt||Date.now()).toLocaleString()} can be restored.`);
+</script>
+</body>
+</html>
