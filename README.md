@@ -36,14 +36,80 @@ The tool practices what it exports. The interface itself meets WCAG 2.1 AA: all 
 
 ## Using the exported tokens
 
-**With Style Dictionary (recommended):**
+**With Style Dictionary (recommended)** — a complete build step from a fresh folder:
 
-```bash
-npm install --save-dev style-dictionary
-# place your <name>.tokens.json and style-dictionary.config.json in the project root
-npx style-dictionary build
-# -> build/css/tokens.css, build/scss, build/js
-```
+1. **Set up the project.** Drop the two files you downloaded from Token Foundry into a folder and install the build tool:
+
+   ```bash
+   mkdir my-tokens && cd my-tokens
+   # copy your.tokens.json and style-dictionary.config.json into this folder
+   npm init -y
+   npm install --save-dev style-dictionary
+   ```
+
+   ```
+   my-tokens/
+   ├── your.tokens.json                # exported from Token Foundry
+   ├── style-dictionary.config.json    # exported from Token Foundry
+   └── package.json
+   ```
+
+2. **Add a build script** to `package.json` (optional, but handy):
+
+   ```json
+   {
+     "scripts": {
+       "build:tokens": "style-dictionary build"
+     }
+   }
+   ```
+
+3. **Run the build:**
+
+   ```bash
+   npm run build:tokens
+   # or without a script:  npx style-dictionary build
+   ```
+
+   ```
+   css
+   ✔︎ build/css/tokens.css
+   scss
+   ✔︎ build/scss/_tokens.scss
+   js
+   ✔︎ build/js/tokens.js
+   ✔︎ build/js/tokens.d.ts
+   json
+   ✔︎ build/json/tokens.flat.json
+   ```
+
+4. **What it generates.** Because the exported config sets `outputReferences: true`, the two-layer raw→semantic structure survives into the CSS — a semantic variable points at its raw one instead of hard-coding the hex:
+
+   ```css
+   /* build/css/tokens.css */
+   :root {
+     --color-raw-blue-600: #2058ca;
+     --color-action-primary-bg: var(--color-raw-blue-600);
+     --color-action-primary-text: var(--color-raw-white);
+     --spacing-4: 1rem;
+     --radius-md: 0.625rem;
+   }
+   ```
+
+5. **Use them.** Import the generated file once and reference the semantic tokens in your components:
+
+   ```css
+   @import "./build/css/tokens.css";
+
+   .btn-primary {
+     background: var(--color-action-primary-bg);
+     color: var(--color-action-primary-text);
+     padding: var(--spacing-4);
+     border-radius: var(--radius-md);
+   }
+   ```
+
+   Never edit the generated files — change a value in Token Foundry, re-export, and rebuild.
 
 **Reading the JSON directly** — any language can parse it. To resolve a semantic pair, follow its reference:
 
