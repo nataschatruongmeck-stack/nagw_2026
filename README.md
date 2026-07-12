@@ -59,7 +59,7 @@ The tool practices what it exports. The interface itself meets WCAG 2.1 AA: all 
    ```json
    {
      "scripts": {
-       "build:tokens": "style-dictionary build"
+       "build:tokens": "style-dictionary build --config style-dictionary.config.json"
      }
    }
    ```
@@ -68,8 +68,10 @@ The tool practices what it exports. The interface itself meets WCAG 2.1 AA: all 
 
    ```bash
    npm run build:tokens
-   # or without a script:  npx style-dictionary build
+   # or without a script:  npx style-dictionary build --config style-dictionary.config.json
    ```
+
+   > The `--config style-dictionary.config.json` flag is required: Style Dictionary's CLI otherwise looks only for a file named `config.json` and reports *"unable to find config file."*
 
    ```
    css

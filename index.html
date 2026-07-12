@@ -1786,7 +1786,7 @@ function buildInstructions(){
   L.push(`### Option A — build with Style Dictionary (recommended)`,``);
   L.push(`1. \`npm install --save-dev style-dictionary\``);
   L.push(`2. Put \`${slug()}.tokens.json\` and \`style-dictionary.config.json\` in your project root.`);
-  L.push(`3. \`npx style-dictionary build\``);
+  L.push(`3. \`npx style-dictionary build --config style-dictionary.config.json\`  (the \`--config\` flag is required — Style Dictionary's CLI otherwise looks only for a file named \`config.json\`)`);
   L.push(`4. Consume the output in \`build/css/tokens.css\` (CSS custom properties), \`build/scss\`, or \`build/js\`.`,``);
   L.push(`> Style Dictionary v4 reads the DTCG \`$value\`/\`$type\` format natively. \`outputReferences\` is on, so the compiled CSS keeps the raw→semantic aliasing (e.g. \`--color-action-primary-bg: var(--color-raw-blue-600)\`).`,``);
   L.push(`> **Shadows and easing** export as DTCG composite objects (shadow: \`{color, offsetX, offsetY, blur, spread}\`; easing: a 4-number \`cubicBezier\` array). Style Dictionary's built-in \`css\` transform group compiles these to valid CSS. The original CSS string is always preserved under \`$extensions["foundry.css"]\` if a consumer needs it verbatim.`,``);
