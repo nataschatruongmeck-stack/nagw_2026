@@ -44,7 +44,7 @@ Nothing to install — it's a web page.
 
 - **Easiest:** open the live link above in any browser.
 - **Local:** double-click `token-foundry.html`, or run
-  `open "/Users/Natascha.Truong/Design Token System/token-foundry.html"`
+  `open ~/"Design Token System/token-foundry.html"`
 
 ---
 
@@ -63,7 +63,7 @@ It converts the exported `tokens.json` into CSS variables, SCSS, and JS/TS.
 
 ### Or from the terminal
 ```bash
-cd "/Users/Natascha.Truong/Design Token System/token-build"
+cd ~/"Design Token System/token-build"
 npx style-dictionary build --config style-dictionary.config.json
 ```
 
