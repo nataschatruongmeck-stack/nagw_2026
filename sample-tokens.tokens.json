@@ -1,0 +1,904 @@
+{
+  "$schema": "https://tr.designtokens.org/format/",
+  "$description": "Sample tokens design tokens. Version 1.0.0. Sample design tokens with WCAG 2.1 contrast ratios recorded.",
+  "color": {
+    "raw": {
+      "white": {
+        "$type": "color",
+        "$value": "#FFFFFF"
+      },
+      "black": {
+        "$type": "color",
+        "$value": "#000000"
+      },
+      "light-teal": {
+        "$type": "color",
+        "$value": "#c5d8dd"
+      },
+      "dark-teal": {
+        "$type": "color",
+        "$value": "#336670"
+      },
+      "medium-gray": {
+        "$type": "color",
+        "$value": "#888888"
+      },
+      "dark-gray": {
+        "$type": "color",
+        "$value": "#2b2b2b"
+      },
+      "mustard": {
+        "$type": "color",
+        "$value": "#d7b333"
+      },
+      "light-gray": {
+        "$type": "color",
+        "$value": "#dedede"
+      }
+    },
+    "action": {
+      "primary": {
+        "bg": {
+          "$value": "{color.raw.light-teal}"
+        },
+        "text": {
+          "$value": "{color.raw.dark-gray}"
+        },
+        "$extensions": {
+          "io.github.nataschatruongmeck-stack.contrast": {
+            "ratio": 9.6,
+            "verdict": "PASS",
+            "passes": [
+              "1.4.3",
+              "1.4.6"
+            ]
+          },
+          "io.github.nataschatruongmeck-stack.note": "Border required: fill is 1.47:1 vs white (SC 1.4.11)."
+        }
+      },
+      "dark-teal": {
+        "bg": {
+          "$value": "{color.raw.dark-teal}"
+        },
+        "text": {
+          "$value": "{color.raw.white}"
+        },
+        "$extensions": {
+          "io.github.nataschatruongmeck-stack.contrast": {
+            "ratio": 6.41,
+            "verdict": "PASS",
+            "passes": [
+              "1.4.3"
+            ]
+          }
+        }
+      },
+      "terracotta": {
+        "bg": {
+          "$value": "{color.raw.terra-700}"
+        },
+        "text": {
+          "$value": "{color.raw.white}"
+        },
+        "$extensions": {
+          "io.github.nataschatruongmeck-stack.contrast": {
+            "ratio": 21,
+            "verdict": "PASS",
+            "passes": [
+              "1.4.3",
+              "1.4.6"
+            ]
+          }
+        }
+      },
+      "teal": {
+        "bg": {
+          "$value": "{color.raw.teal-700}"
+        },
+        "text": {
+          "$value": "{color.raw.white}"
+        },
+        "$extensions": {
+          "io.github.nataschatruongmeck-stack.contrast": {
+            "ratio": 21,
+            "verdict": "PASS",
+            "passes": [
+              "1.4.3",
+              "1.4.6"
+            ]
+          }
+        }
+      },
+      "purple": {
+        "bg": {
+          "$value": "{color.raw.purple-900}"
+        },
+        "text": {
+          "$value": "{color.raw.white}"
+        },
+        "$extensions": {
+          "io.github.nataschatruongmeck-stack.contrast": {
+            "ratio": 21,
+            "verdict": "PASS",
+            "passes": [
+              "1.4.3",
+              "1.4.6"
+            ]
+          }
+        }
+      },
+      "green": {
+        "bg": {
+          "$value": "{color.raw.green-300}"
+        },
+        "text": {
+          "$value": "{color.raw.black}"
+        },
+        "border": {
+          "$value": "{color.raw.olive-700}",
+          "width": "1px"
+        },
+        "$extensions": {
+          "io.github.nataschatruongmeck-stack.contrast": {
+            "ratio": 1,
+            "verdict": "FAIL",
+            "passes": []
+          }
+        }
+      }
+    },
+    "status": {
+      "error": {
+        "fg": {
+          "$value": "{color.raw.error-700}"
+        },
+        "bg": {
+          "$value": "{color.raw.tint-peach}"
+        },
+        "icon": {
+          "$value": "triangle"
+        },
+        "$extensions": {
+          "io.github.nataschatruongmeck-stack.contrast": {
+            "ratio": 1,
+            "verdict": "FAIL",
+            "passes": []
+          },
+          "io.github.nataschatruongmeck-stack.note": "Pair with icon + text; never signal by color alone (SC 1.4.1)."
+        }
+      },
+      "success": {
+        "fg": {
+          "$value": "{color.raw.success-800}"
+        },
+        "bg": {
+          "$value": "{color.raw.tint-green}"
+        },
+        "icon": {
+          "$value": "check"
+        },
+        "$extensions": {
+          "io.github.nataschatruongmeck-stack.contrast": {
+            "ratio": 1,
+            "verdict": "FAIL",
+            "passes": []
+          },
+          "io.github.nataschatruongmeck-stack.note": "Pair with icon + text; never signal by color alone (SC 1.4.1)."
+        }
+      },
+      "info": {
+        "fg": {
+          "$value": "{color.raw.navy-800}"
+        },
+        "bg": {
+          "$value": "{color.raw.tint-blue}"
+        },
+        "icon": {
+          "$value": "info"
+        },
+        "$extensions": {
+          "io.github.nataschatruongmeck-stack.contrast": {
+            "ratio": 1,
+            "verdict": "FAIL",
+            "passes": []
+          },
+          "io.github.nataschatruongmeck-stack.note": "Pair with icon + text; never signal by color alone (SC 1.4.1)."
+        }
+      }
+    },
+    "surface": {
+      "default": {
+        "bg": {
+          "$value": "{color.raw.white}"
+        },
+        "text": {
+          "$value": "{color.raw.ink-900}"
+        },
+        "$extensions": {
+          "io.github.nataschatruongmeck-stack.contrast": {
+            "ratio": 21,
+            "verdict": "PASS",
+            "passes": [
+              "1.4.3",
+              "1.4.6"
+            ]
+          }
+        }
+      },
+      "muted": {
+        "bg": {
+          "$value": "{color.raw.tint-gray}"
+        },
+        "text": {
+          "$value": "{color.raw.ink-900}"
+        },
+        "$extensions": {
+          "io.github.nataschatruongmeck-stack.contrast": {
+            "ratio": 1,
+            "verdict": "FAIL",
+            "passes": []
+          }
+        }
+      },
+      "info-subtle": {
+        "bg": {
+          "$value": "{color.raw.tint-blue}"
+        },
+        "text": {
+          "$value": "{color.raw.navy-800}"
+        },
+        "$extensions": {
+          "io.github.nataschatruongmeck-stack.contrast": {
+            "ratio": 1,
+            "verdict": "FAIL",
+            "passes": []
+          }
+        }
+      },
+      "brand": {
+        "bg": {
+          "$value": "{color.raw.navy-800}"
+        },
+        "text": {
+          "$value": "{color.raw.white}"
+        },
+        "$extensions": {
+          "io.github.nataschatruongmeck-stack.contrast": {
+            "ratio": 21,
+            "verdict": "PASS",
+            "passes": [
+              "1.4.3",
+              "1.4.6"
+            ]
+          }
+        }
+      },
+      "brand-teal": {
+        "bg": {
+          "$value": "{color.raw.teal-700}"
+        },
+        "text": {
+          "$value": "{color.raw.white}"
+        },
+        "$extensions": {
+          "io.github.nataschatruongmeck-stack.contrast": {
+            "ratio": 21,
+            "verdict": "PASS",
+            "passes": [
+              "1.4.3",
+              "1.4.6"
+            ]
+          }
+        }
+      }
+    },
+    "link": {
+      "fg": {
+        "$value": "{color.raw.dark-teal}"
+      },
+      "$extensions": {
+        "io.github.nataschatruongmeck-stack.contrast": {
+          "ratio": 6.41,
+          "verdict": "PASS",
+          "passes": [
+            "1.4.3"
+          ]
+        }
+      }
+    },
+    "focus": {
+      "ring-color": {
+        "$value": "{color.raw.dark-teal}"
+      },
+      "$extensions": {
+        "io.github.nataschatruongmeck-stack.contrast": {
+          "ratio": 6.41,
+          "passes": [
+            "1.4.11"
+          ],
+          "note": "Focus indicator vs white; needs ≥3:1 (SC 1.4.11)."
+        }
+      }
+    }
+  },
+  "typography": {
+    "family": {
+      "$type": "fontFamily",
+      "$value": [
+        "Roboto",
+        "system-ui",
+        "sans-serif"
+      ]
+    },
+    "desktop": {
+      "h1": {
+        "fontSize": {
+          "$type": "dimension",
+          "$value": "3rem"
+        },
+        "lineHeight": {
+          "$type": "dimension",
+          "$value": "3.625rem"
+        },
+        "fontWeight": {
+          "$type": "fontWeight",
+          "$value": 700
+        }
+      },
+      "h2": {
+        "fontSize": {
+          "$type": "dimension",
+          "$value": "2.5rem"
+        },
+        "lineHeight": {
+          "$type": "dimension",
+          "$value": "3.125rem"
+        },
+        "fontWeight": {
+          "$type": "fontWeight",
+          "$value": 700
+        }
+      },
+      "h3": {
+        "fontSize": {
+          "$type": "dimension",
+          "$value": "2.25rem"
+        },
+        "lineHeight": {
+          "$type": "dimension",
+          "$value": "2.75rem"
+        },
+        "fontWeight": {
+          "$type": "fontWeight",
+          "$value": 700
+        }
+      },
+      "h4": {
+        "fontSize": {
+          "$type": "dimension",
+          "$value": "2rem"
+        },
+        "lineHeight": {
+          "$type": "dimension",
+          "$value": "2.5rem"
+        },
+        "fontWeight": {
+          "$type": "fontWeight",
+          "$value": 700
+        }
+      },
+      "h5": {
+        "fontSize": {
+          "$type": "dimension",
+          "$value": "1.75rem"
+        },
+        "lineHeight": {
+          "$type": "dimension",
+          "$value": "2.125rem"
+        },
+        "fontWeight": {
+          "$type": "fontWeight",
+          "$value": 700
+        }
+      },
+      "h6": {
+        "fontSize": {
+          "$type": "dimension",
+          "$value": "1.5rem"
+        },
+        "lineHeight": {
+          "$type": "dimension",
+          "$value": "1.75rem"
+        },
+        "fontWeight": {
+          "$type": "fontWeight",
+          "$value": 700
+        }
+      },
+      "body": {
+        "fontSize": {
+          "$type": "dimension",
+          "$value": "1.125rem"
+        },
+        "lineHeight": {
+          "$type": "dimension",
+          "$value": "1.5rem"
+        },
+        "fontWeight": {
+          "$type": "fontWeight",
+          "$value": 500
+        }
+      },
+      "body-small": {
+        "fontSize": {
+          "$type": "dimension",
+          "$value": "0.875rem"
+        },
+        "lineHeight": {
+          "$type": "dimension",
+          "$value": "1.1875rem"
+        },
+        "fontWeight": {
+          "$type": "fontWeight",
+          "$value": 400
+        }
+      }
+    },
+    "mobile": {
+      "h1": {
+        "fontSize": {
+          "$type": "dimension",
+          "$value": "2.5rem"
+        },
+        "lineHeight": {
+          "$type": "dimension",
+          "$value": "3.125rem"
+        },
+        "fontWeight": {
+          "$type": "fontWeight",
+          "$value": 700
+        }
+      },
+      "h2": {
+        "fontSize": {
+          "$type": "dimension",
+          "$value": "2.25rem"
+        },
+        "lineHeight": {
+          "$type": "dimension",
+          "$value": "2.75rem"
+        },
+        "fontWeight": {
+          "$type": "fontWeight",
+          "$value": 700
+        }
+      },
+      "h3": {
+        "fontSize": {
+          "$type": "dimension",
+          "$value": "2rem"
+        },
+        "lineHeight": {
+          "$type": "dimension",
+          "$value": "2.5rem"
+        },
+        "fontWeight": {
+          "$type": "fontWeight",
+          "$value": 700
+        }
+      },
+      "h4": {
+        "fontSize": {
+          "$type": "dimension",
+          "$value": "1.75rem"
+        },
+        "lineHeight": {
+          "$type": "dimension",
+          "$value": "2.125rem"
+        },
+        "fontWeight": {
+          "$type": "fontWeight",
+          "$value": 700
+        }
+      },
+      "h5": {
+        "fontSize": {
+          "$type": "dimension",
+          "$value": "1.5rem"
+        },
+        "lineHeight": {
+          "$type": "dimension",
+          "$value": "1.75rem"
+        },
+        "fontWeight": {
+          "$type": "fontWeight",
+          "$value": 700
+        }
+      },
+      "h6": {
+        "fontSize": {
+          "$type": "dimension",
+          "$value": "1.25rem"
+        },
+        "lineHeight": {
+          "$type": "dimension",
+          "$value": "1.625rem"
+        },
+        "fontWeight": {
+          "$type": "fontWeight",
+          "$value": 700
+        }
+      },
+      "body": {
+        "fontSize": {
+          "$type": "dimension",
+          "$value": "1rem"
+        },
+        "lineHeight": {
+          "$type": "dimension",
+          "$value": "1.5rem"
+        },
+        "fontWeight": {
+          "$type": "fontWeight",
+          "$value": 500
+        }
+      }
+    }
+  },
+  "spacing": {
+    "0": {
+      "$type": "dimension",
+      "$value": "0rem"
+    },
+    "1": {
+      "$type": "dimension",
+      "$value": "0.25rem"
+    },
+    "2": {
+      "$type": "dimension",
+      "$value": "0.5rem"
+    },
+    "3": {
+      "$type": "dimension",
+      "$value": "0.75rem"
+    },
+    "4": {
+      "$type": "dimension",
+      "$value": "1rem"
+    },
+    "5": {
+      "$type": "dimension",
+      "$value": "1.5rem"
+    },
+    "6": {
+      "$type": "dimension",
+      "$value": "2rem"
+    },
+    "7": {
+      "$type": "dimension",
+      "$value": "2.5rem"
+    },
+    "8": {
+      "$type": "dimension",
+      "$value": "3rem"
+    },
+    "10": {
+      "$type": "dimension",
+      "$value": "4rem"
+    },
+    "12": {
+      "$type": "dimension",
+      "$value": "6rem"
+    }
+  },
+  "radius": {
+    "none": {
+      "$type": "dimension",
+      "$value": "0rem"
+    },
+    "sm": {
+      "$type": "dimension",
+      "$value": "0.5rem"
+    },
+    "md": {
+      "$type": "dimension",
+      "$value": "0.625rem"
+    },
+    "lg": {
+      "$type": "dimension",
+      "$value": "1rem"
+    },
+    "full": {
+      "$type": "dimension",
+      "$value": "624.9375rem"
+    }
+  },
+  "borderWidth": {
+    "hairline": {
+      "$type": "dimension",
+      "$value": "0.0625rem"
+    },
+    "thin": {
+      "$type": "dimension",
+      "$value": "0.125rem"
+    },
+    "thick": {
+      "$type": "dimension",
+      "$value": "0.1875rem"
+    }
+  },
+  "shadow": {
+    "sm": {
+      "$type": "shadow",
+      "$value": {
+        "color": "rgba(0,0,0,0.08)",
+        "offsetX": "0px",
+        "offsetY": "1px",
+        "blur": "2px",
+        "spread": "0px"
+      },
+      "$extensions": {
+        "foundry.css": "0 1px 2px rgba(0,0,0,0.08)"
+      }
+    },
+    "md": {
+      "$type": "shadow",
+      "$value": {
+        "color": "rgba(0,0,0,0.10)",
+        "offsetX": "0px",
+        "offsetY": "4px",
+        "blur": "10px",
+        "spread": "0px"
+      },
+      "$extensions": {
+        "foundry.css": "0 4px 10px rgba(0,0,0,0.10)"
+      }
+    },
+    "lg": {
+      "$type": "shadow",
+      "$value": {
+        "color": "rgba(0,0,0,0.14)",
+        "offsetX": "0px",
+        "offsetY": "12px",
+        "blur": "28px",
+        "spread": "0px"
+      },
+      "$extensions": {
+        "foundry.css": "0 12px 28px rgba(0,0,0,0.14)"
+      }
+    }
+  },
+  "duration": {
+    "fast": {
+      "$type": "duration",
+      "$value": "150ms"
+    },
+    "base": {
+      "$type": "duration",
+      "$value": "250ms"
+    },
+    "slow": {
+      "$type": "duration",
+      "$value": "400ms"
+    }
+  },
+  "easing": {
+    "standard": {
+      "$type": "cubicBezier",
+      "$value": [
+        0.2,
+        0,
+        0,
+        1
+      ]
+    },
+    "decelerate": {
+      "$type": "cubicBezier",
+      "$value": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "accelerate": {
+      "$type": "cubicBezier",
+      "$value": [
+        0.3,
+        0,
+        1,
+        1
+      ]
+    }
+  },
+  "breakpoint": {
+    "sm": {
+      "$type": "dimension",
+      "$value": "640px"
+    },
+    "md": {
+      "$type": "dimension",
+      "$value": "768px"
+    },
+    "lg": {
+      "$type": "dimension",
+      "$value": "1024px"
+    },
+    "xl": {
+      "$type": "dimension",
+      "$value": "1280px"
+    }
+  },
+  "zIndex": {
+    "base": {
+      "$type": "number",
+      "$value": 0
+    },
+    "dropdown": {
+      "$type": "number",
+      "$value": 1000
+    },
+    "sticky": {
+      "$type": "number",
+      "$value": 1100
+    },
+    "overlay": {
+      "$type": "number",
+      "$value": 1200
+    },
+    "modal": {
+      "$type": "number",
+      "$value": 1300
+    },
+    "toast": {
+      "$type": "number",
+      "$value": 1400
+    }
+  },
+  "opacity": {
+    "disabled": {
+      "$type": "number",
+      "$value": 0.45
+    },
+    "muted": {
+      "$type": "number",
+      "$value": 0.65
+    },
+    "full": {
+      "$type": "number",
+      "$value": 1
+    }
+  },
+  "component": {
+    "button": {
+      "standard": {
+        "minHeight": {
+          "$type": "dimension",
+          "$value": "3.125rem"
+        },
+        "minWidth": {
+          "$type": "dimension",
+          "$value": "11.375rem"
+        },
+        "padding": {
+          "$type": "dimension",
+          "$value": "1rem"
+        },
+        "radius": {
+          "$type": "dimension",
+          "$value": "0.625rem"
+        },
+        "shadow": {
+          "$type": "shadow",
+          "$value": "none"
+        }
+      },
+      "narrow": {
+        "minHeight": {
+          "$type": "dimension",
+          "$value": "2rem"
+        },
+        "minWidth": {
+          "$type": "dimension",
+          "$value": "11.375rem"
+        },
+        "padding": {
+          "$type": "dimension",
+          "$value": "0.75rem"
+        },
+        "radius": {
+          "$type": "dimension",
+          "$value": "0.625rem"
+        },
+        "shadow": {
+          "$type": "shadow",
+          "$value": "none"
+        }
+      },
+      "search-mobile": {
+        "minHeight": {
+          "$type": "dimension",
+          "$value": "3.125rem"
+        },
+        "minWidth": {
+          "$type": "dimension",
+          "$value": "9.5rem"
+        },
+        "padding": {
+          "$type": "dimension",
+          "$value": "0.8125rem"
+        },
+        "radius": {
+          "$type": "dimension",
+          "$value": "0.5rem"
+        },
+        "shadow": {
+          "$type": "shadow",
+          "$value": "none"
+        }
+      }
+    },
+    "card": {
+      "radius": {
+        "$type": "dimension",
+        "$value": "1rem"
+      },
+      "gap": {
+        "$type": "dimension",
+        "$value": "0.5rem"
+      },
+      "paddingNoImage": {
+        "$type": "dimension",
+        "$value": "2rem"
+      },
+      "paddingWithImage": {
+        "$type": "dimension",
+        "$value": "1rem"
+      },
+      "titleBorderRest": {
+        "$type": "dimension",
+        "$value": "0.125rem"
+      },
+      "titleBorderHover": {
+        "$type": "dimension",
+        "$value": "0.1875rem"
+      },
+      "shadow": {
+        "$type": "shadow",
+        "$value": "none"
+      }
+    },
+    "input": {
+      "minHeight": {
+        "$type": "dimension",
+        "$value": "2.75rem"
+      },
+      "padding": {
+        "$type": "dimension",
+        "$value": "0.75rem"
+      },
+      "radius": {
+        "$type": "dimension",
+        "$value": "0.5rem"
+      },
+      "borderWidth": {
+        "$type": "dimension",
+        "$value": "0.0625rem"
+      },
+      "shadow": {
+        "$type": "shadow",
+        "$value": "none"
+      }
+    }
+  },
+  "$extensions": {
+    "foundry.meta": {
+      "name": "Sample tokens",
+      "version": "1.0.0",
+      "description": "Sample design tokens with WCAG 2.1 contrast ratios recorded.",
+      "baseFontSize": 16,
+      "generator": "token-foundry",
+      "generatedAt": "2026-09-26T17:10:12.576Z"
+    }
+  }
+}
